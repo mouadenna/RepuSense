@@ -134,3 +134,7 @@ openai_credentials.json
 !examples/**/*.csv
 !tests/data/**/*.json
 !tests/data/**/*.csv 
+
+
+
+repusense-dashboard/node_modules/

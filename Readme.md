@@ -1,319 +1,240 @@
-# RepuSense: Reddit Data Analysis Pipeline
+# RepuSense
 
-RepuSense is a comprehensive data analysis pipeline that performs NLP tasks on Reddit data, specifically focused on analyzing public sentiment and discussions about any company. The pipeline includes data collection, preprocessing, and various NLP analyses, with results exposed via a REST API.
+A Natural Language Processing (NLP) pipeline for analyzing company reputation and sentiment from multiple data sources.
 
-## Project Structure
+## Project Overview
 
-```
-RepuSense/
-│
-├── scrapping script/                # Original Reddit data scraping script
-│   ├── reddit_nlp_scraper.py        # Script for scraping Reddit posts
-│   └── reddit_nlp_*.json            # Downloaded Reddit data
-│
-├── nlp_pipeline/                    # Main NLP pipeline code
-│   ├── data_processing/             # Data fetching and preprocessing
-│   │   ├── data_fetcher.py          # Module for fetching Reddit data
-│   │   └── data_preprocessor.py     # Module for preprocessing data
-│   │
-│   ├── spark_nlp/                   # NLP analysis modules
-│   │   ├── topic_modeling.py        # Topic modeling using BERTopic
-│   │   ├── sentiment_analysis.py    # Sentiment analysis using CardiffNLP model
-│   │   ├── keyword_extraction.py    # Keyword extraction using KeyBERT
-│   │   └── engagement_analysis.py   # Comment engagement analysis
-│   │
-│   ├── api/                         # API for exposing NLP results
-│   │   ├── main.py                  # FastAPI application
-│   │   └── process_request.py       # Module for processing analysis requests
-│   │
-│   └── main.py                      # Main orchestrator for the pipeline
-│
-├── airflow/                         # Airflow DAGs for scheduled runs
-│   └── repusense_dag.py             # Weekly pipeline execution DAG
-│
-├── data_storage/                    # Directory for storing raw data by company (created at runtime)
-├── processed_data/                  # Directory for storing processed data by company (created at runtime)
-├── nlp_results/                     # Directory for storing NLP results by company (created at runtime)
-├── api_data/                        # Directory for API data by company (created at runtime)
-├── api_requests/                    # Directory for storing analysis requests (created at runtime)
-│
-├── requirements.txt                 # Project dependencies
-└── README.md                        # Project documentation
-```
+RepuSense is a comprehensive tool designed to analyze public perception of companies by processing text data from various sources including:
 
-## Setup
+- **Social Media**: Reddit, Twitter, Facebook, etc.
+- **News Articles**: Online news publications and press releases
+- **Product Reviews**: E-commerce platforms and review sites
+- **Forums**: Industry-specific discussion boards
+- **Customer Feedback**: Survey responses and support tickets
+
+The pipeline extracts valuable insights through:
+
+- **Topic Modeling**: Discover key discussion themes about a company
+- **Sentiment Analysis**: Understand the emotional tone of conversations
+- **Keyword Extraction**: Identify important terms and phrases
+- **Engagement Analysis**: Measure user interaction and interest levels
+
+## Installation
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- Pip for package installation
-- Apache Airflow 2.6+ (for scheduled runs)
-- AWS account with S3 access (for storing results)
+- Python 3.8+
+- Pip package manager
+- Azure account (for embedding models)
+- API credentials for desired data sources
 
-### Installation
+### Setup
 
 1. Clone the repository:
-   ```bash
+   ```
    git clone https://github.com/yourusername/RepuSense.git
    cd RepuSense
    ```
 
 2. Create a virtual environment:
-   ```bash
+   ```
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. Install the dependencies:
-   ```bash
+3. Install dependencies:
+   ```
    pip install -r requirements.txt
    ```
 
-4. Configure AWS credentials (if using S3 storage):
-   ```bash
-   export AWS_ACCESS_KEY_ID=your_access_key
-   export AWS_SECRET_ACCESS_KEY=your_secret_key
-   export REPUSENSE_S3_BUCKET=your_bucket_name
+4. Create a `config.json` file in the project root with your configuration:
+   ```json
+   {
+     "pipeline": {
+       "default_company": "inwi"
+     },
+     "s3": {
+       "enabled": false,
+       "bucket": "repusense-results",
+       "region": "us-east-1"
+     },
+     "data_sources": {
+       "reddit": true,
+       "twitter": false,
+       "news": false,
+       "reviews": false
+     }
+   }
    ```
 
 ## Usage
 
-### Running the Pipeline
+### Basic Usage
 
-You can run the full NLP pipeline for a specific company using the main script:
+Run the NLP pipeline for a specific company:
 
-```bash
-python run_pipeline.py --company "YourCompanyName"
+```
+python nlp_pipeline/main.py --company "Apple"
 ```
 
-This command will:
-1. Fetch Reddit data about the specified company
-2. Preprocess the data
-3. Run various NLP analyses
-4. Generate API-ready data
-5. Start the API server
+### Using Existing Data
 
-#### Command Line Options
+Process pre-collected data for a company:
 
-The run_pipeline.py script supports the following options:
-
-- `--company`: Name of the company to analyze (required for new analyses)
-- `--skip-pipeline`: Skip running the NLP pipeline and just start the API
-- `--use-existing`: Use existing data (without fetching new data)
-- `--skip-topic`: Skip topic modeling (which is resource-intensive)
-- `--skip-sentiment`: Skip sentiment analysis
-- `--skip-keyword`: Skip keyword extraction
-- `--start-date`: Start date for data fetching (format: "YYYY-MM-DD")
-- `--end-date`: End date for data fetching (format: "YYYY-MM-DD")
-- `--existing-file`: Path to existing data file to use
-- `--api-only`: Only start the API server without running the pipeline
-- `--port`: Port for the API server (default: 8000)
-- `--use-s3`: Store results in an S3 bucket
-- `--s3-bucket`: S3 bucket name for storing results
-
-#### Examples
-
-1. To analyze a new company:
-   ```bash
-   python run_pipeline.py --company "Microsoft" --start-date "2024-01-01" --end-date "2024-06-30"
-   ```
-
-2. To use existing data for a company:
-   ```bash
-   python run_pipeline.py --company "Apple" --use-existing --existing-file "path/to/apple_data.json"
-   ```
-
-3. To skip resource-intensive analyses:
-   ```bash
-   python run_pipeline.py --company "Google" --skip-topic --skip-sentiment
-   ```
-
-4. To just start the API server:
-   ```bash
-   python run_pipeline.py --api-only
-   ```
-
-5. To store results in S3:
-   ```bash
-   python run_pipeline.py --company "Amazon" --use-s3 --s3-bucket "my-repusense-bucket"
-   ```
-
-### Running the Pipeline Directly
-
-You can also run the pipeline directly using the main.py script for more control:
-
-```bash
-python nlp_pipeline/main.py --company "CompanyName" --start-date "2024-01-01" --end-date "2024-06-30" --use-s3 --s3-bucket "my-repusense-bucket"
+```
+python nlp_pipeline/main.py --company "Microsoft" --use-existing --existing-file "/path/to/data.json"
 ```
 
-#### Additional Options
+### Fetching New Data
 
-- `--keyword`: Custom keyword to search for on Reddit (if different from company name)
-- `--limit`: Maximum number of posts to fetch
+Collect and analyze new data for a date range:
+
+```
+python nlp_pipeline/main.py --company "Tesla" --start-date "2024-01-01" --end-date "2024-05-01"
+```
+
+### Specifying Data Sources
+
+You can specify which data sources to use:
+
+```
+python nlp_pipeline/main.py --company "Samsung" --sources "reddit,twitter,news"
+```
+
+### Full Command Reference
+
+```
+python nlp_pipeline/main.py --company "CompanyName" [OPTIONS]
+```
+
+Required arguments:
+- `--company`: Name of the company to analyze (required)
+
+Optional arguments:
+- `--start-date`: Start date for data collection (YYYY-MM-DD)
+- `--end-date`: End date for data collection (YYYY-MM-DD)
+- `--limit`: Maximum number of posts/articles to fetch
+- `--sources`: Comma-separated list of data sources to use
+- `--use-existing`: Use existing data file
+- `--existing-file`: Path to the existing data file
+- `--use-s3`: Store results in S3
+- `--s3-bucket`: S3 bucket name
+
+Skip specific pipeline steps:
 - `--skip-fetch`: Skip data fetching
 - `--skip-preprocess`: Skip data preprocessing
+- `--skip-topic`: Skip topic modeling
+- `--skip-sentiment`: Skip sentiment analysis
+- `--skip-keyword`: Skip keyword extraction
+- `--skip-engagement`: Skip engagement analysis
 - `--skip-api`: Skip API data preparation
 
-### Scheduled Runs with Airflow
+## Pipeline Components
 
-RepuSense includes an Airflow DAG for scheduling weekly analysis runs:
+### 1. Data Fetching
 
-1. Copy the DAG file to your Airflow DAGs folder:
-   ```bash
-   cp airflow/repusense_dag.py ~/airflow/dags/
-   ```
+The pipeline can collect data from multiple sources:
 
-2. Update the configuration in the DAG file:
-   - Update `sys.path.append('/path/to/RepuSense')` with your actual project path
-   - Configure the `S3_BUCKET` and `S3_REGION` variables
-   - Update the list of companies to analyze in the `run_all_companies_pipeline` function
+- **Reddit**: Using PRAW (Python Reddit API Wrapper)
+- **Twitter**: Using Twitter API v2
+- **News Articles**: Using news APIs and web scraping
+- **Review Sites**: Using site-specific APIs and scraping techniques
+- **Custom Sources**: Support for custom data sources via adapters
 
-3. The DAG will run automatically every Sunday at midnight, processing all companies and storing results in S3.
+### 2. Data Preprocessing
 
-### Running the API
+Cleans and transforms raw text data by:
+- Removing URLs, special characters, and formatting
+- Normalizing text across different data sources
+- Preserving source-specific metadata
+- Preparing text for NLP analysis
 
-Once you've run the pipeline and generated the API data, you can start just the API server:
+### 3. NLP Analysis
 
-```bash
-cd nlp_pipeline/api
-uvicorn main:app --reload
-```
+The core analysis is performed through several components:
 
-The API will be available at http://localhost:8000.
+#### Topic Modeling
 
-#### API Endpoints
+Discovers the main themes and topics in discussions about the company using BERTopic with Azure embeddings.
 
-The API provides company-specific endpoints:
+#### Sentiment Analysis
 
-- `/api/companies`: Get list of all analyzed companies
-- `/api/company/{company_name}`: Get company information
-- `/api/company/{company_name}/topics`: Get topic distribution for a company
-- `/api/company/{company_name}/sentiment`: Get sentiment analysis results for a company
-- `/api/company/{company_name}/keywords`: Get keyword extraction results for a company
-- `/api/company/{company_name}/engagement`: Get comment engagement index for a company
-- `/api/company/{company_name}/wordcloud`: Get word cloud data for a company
-- `/api/company/{company_name}/post/{post_id}/sentiment`: Get sentiment for a specific post
-- `/api/company/{company_name}/post/{post_id}/keywords`: Get keywords for a specific post
-- `/api/company/{company_name}/post/{post_id}/engagement`: Get engagement for a specific post
+Evaluates the emotional tone of content using a transformer-based sentiment analysis model.
 
-#### Triggering Analysis via API
+#### Keyword Extraction
 
-You can trigger on-demand analysis for a company:
+Identifies key terms and phrases that characterize discussions about the company using KeyBERT.
 
-- `POST /api/analyze`: Trigger analysis for a company
-  ```json
-  {
-    "company": "CompanyName",
-    "start_date": "2024-01-01",
-    "end_date": "2024-06-30",
-    "keyword": "optional_custom_keyword",
-    "async_processing": false
-  }
-  ```
+#### Engagement Analysis
 
-- `GET /api/analyze/{request_id}`: Check the status of an analysis request
-- `GET /api/requests`: List recent analysis requests
+Measures user interaction and interest based on source-specific engagement metrics (comments, likes, shares, etc.).
 
-For backward compatibility, the API also supports general endpoints with optional company filtering:
+### 4. Results Storage
 
-- `/api/topics?company=CompanyName`: Get topic distribution
-- `/api/sentiment?company=CompanyName`: Get sentiment analysis results
-- `/api/keywords?company=CompanyName`: Get keyword extraction results
-- `/api/engagement?company=CompanyName`: Get comment engagement index
-- `/api/wordcloud?company=CompanyName`: Get word cloud data
+Results are saved in structured JSON format in the following directories:
+- Topics: `data/nlp_results/{company}/topics/`
+- Sentiment: `data/nlp_results/{company}/sentiment/`
+- Keywords: `data/nlp_results/{company}/keywords/`
+- Engagement: `data/nlp_results/{company}/engagement/`
 
-### S3 Storage Structure
+API-ready data is stored in `data/api_data/{company}/`.
 
-When using S3 storage, the results are organized as follows:
+## Directory Structure
 
 ```
-s3://your-bucket-name/
-├── company1/
-│   └── YYYYMMDD/                      # Date of analysis
-│       ├── topics.json                # Topic modeling results
-│       ├── sentiment.json             # Sentiment analysis results
-│       ├── keywords.json              # Keyword extraction results
-│       ├── engagement.json            # Engagement analysis results
-│       ├── wordcloud.json             # Word cloud data
-│       ├── company_info.json          # Company metadata
-│       └── combined_results.json      # All results combined in one file
-│
-├── company2/
-│   └── YYYYMMDD/
-│       └── ...
+RepuSense/
+├── config.json                   # Project configuration
+├── nlp_pipeline/                 # Main pipeline code
+│   ├── main.py                   # Pipeline orchestrator
+│   ├── data_processing/          # Data fetching and preprocessing
+│   │   ├── data_fetcher.py       # Core data fetching framework
+│   │   ├── sources/              # Source-specific fetchers
+│   │   │   ├── reddit_fetcher.py # Reddit-specific fetcher
+│   │   │   ├── twitter_fetcher.py # Twitter-specific fetcher
+│   │   │   ├── news_fetcher.py   # News-specific fetcher
+│   │   │   └── review_fetcher.py # Review sites fetcher
+│   │   └── data_preprocessor.py  # Preprocesses text data
+│   └── spark_nlp/                # NLP analysis components
+│       ├── topic_modeling.py     # Topic modeling with BERTopic
+│       ├── sentiment_analysis.py # Sentiment analysis
+│       ├── keyword_extraction.py # Keyword extraction
+│       └── engagement_analysis.py # Engagement analysis
+├── scrapping script/             # Data collection utilities
+│   ├── reddit_nlp_scraper.py     # Reddit data collector
+│   └── other_scrapers/           # Additional data collectors
+├── data/                         # Data storage (git-ignored)
+│   ├── data_storage/             # Raw data
+│   ├── processed_data/           # Preprocessed data
+│   ├── nlp_results/              # Analysis results
+│   └── api_data/                 # API-ready data
+└── requirements.txt              # Project dependencies
 ```
 
-This structure allows for keeping historical analyses and comparing changes over time.
+## Example Visualizations
 
-### Individual Pipeline Components
+After running the pipeline, you can find:
 
-You can also run individual components of the pipeline:
+- Topic visualizations: `data/nlp_results/{company}/topics/topic_visualization.html`
+- Sentiment distribution: `data/nlp_results/{company}/sentiment/sentiment_distribution.html` 
+- Word cloud: `data/nlp_results/{company}/keywords/wordcloud.png`
+- Engagement analysis: `data/nlp_results/{company}/engagement/engagement_distribution.html`
+- Source comparison: `data/nlp_results/{company}/source_comparison.html`
 
-1. **Data Fetching**:
-   ```bash
-   python nlp_pipeline/data_processing/data_fetcher.py
-   ```
+## Extending to New Data Sources
 
-2. **Data Preprocessing**:
-   ```bash
-   python nlp_pipeline/data_processing/data_preprocessor.py
-   ```
+RepuSense is designed to be easily extensible to new data sources. To add a new source:
 
-3. **Topic Modeling**:
-   ```bash
-   python nlp_pipeline/spark_nlp/topic_modeling.py
-   ```
+1. Create a new fetcher in `nlp_pipeline/data_processing/sources/`
+2. Implement the required interface methods:
+   - `fetch_data()`
+   - `parse_data()`
+   - `get_metadata()`
+3. Register the new source in `config.json`
+4. The pipeline will automatically incorporate the new source
 
-4. **Sentiment Analysis**:
-   ```bash
-   python nlp_pipeline/spark_nlp/sentiment_analysis.py
-   ```
+## Contributing
 
-5. **Keyword Extraction**:
-   ```bash
-   python nlp_pipeline/spark_nlp/keyword_extraction.py
-   ```
-
-6. **Engagement Analysis**:
-   ```bash
-   python nlp_pipeline/spark_nlp/engagement_analysis.py
-   ```
-
-## NLP Tasks and Results
-
-### Topic Modeling
-
-- Uses BERTopic to identify topics in the Reddit posts and comments
-- Results include topic distribution, keywords for each topic, and visualizations
-
-### Sentiment Analysis
-
-- Uses the CardiffNLP/twitter-roberta-base-sentiment model to analyze sentiment
-- Categorizes text as positive, neutral, or negative with a confidence score
-
-### Keyword Extraction
-
-- Uses KeyBERT to extract the most relevant keywords from posts and comments
-- Results include top keywords per post and overall word frequencies
-
-### Engagement Analysis
-
-- Analyzes comment engagement by counting comments per post
-- Identifies the most engaged posts and provides engagement distribution
-
-## Use Cases
-
-RepuSense can be used for various purposes:
-
-1. **Brand Monitoring**: Track public perception and sentiment about a company
-2. **Competitor Analysis**: Compare sentiment and topics across multiple companies
-3. **Crisis Management**: Identify negative sentiment spikes and emerging issues
-4. **Market Research**: Understand what topics consumers associate with a brand
-5. **Content Strategy**: Identify topics with high engagement to inform content creation
-
-## Contact
-
-For any questions or issues, please open an issue on GitHub or contact the project maintainers.
+Contributions to RepuSense are welcome! Please feel free to submit a Pull Request.
 
 ## License
 

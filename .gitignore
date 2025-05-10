@@ -123,6 +123,7 @@ openai_credentials.json
 !tests/data/**/*.csv 
 
 
+data/*/
 
 repusense-dashboard/node_modules/
 repusense-dashboard/.next/

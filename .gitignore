@@ -45,20 +45,7 @@ sdist/
 var/
 wheels/
 
-# Data directories
-data/
-*.csv
-*.json
-*.xml
-*.jsonl
-*.parquet
-*.pkl
-*.h5
-*.bin
-*.vec
-*.model
-*.npy
-*.npz
+
 
 # Jupyter Notebook
 .ipynb_checkpoints

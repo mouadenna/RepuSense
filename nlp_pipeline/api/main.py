@@ -9,6 +9,7 @@ import sys
 from fastapi import FastAPI, HTTPException, Query, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse  # added for serving HTML files
 from pydantic import BaseModel
 
 # Import the request processor
@@ -176,18 +177,6 @@ def read_root():
         "version": "1.0.0"
     }
 
-@app.get("/api/companies")
-def get_companies():
-    """
-    Get list of companies with available analysis data.
-    
-    Returns:
-        List of company information
-    """
-    companies = get_available_companies()
-    if not companies:
-        raise HTTPException(status_code=404, detail="No company data found")
-    return companies
 
 @app.get("/api/company/{company_name}")
 def get_company_info(company_name: str):
@@ -301,6 +290,16 @@ def get_company_topics(company_name: str):
     if data is None:
         raise HTTPException(status_code=404, detail=f"Topic data for company {company_name} not found")
     return data
+
+@app.get("/api/company/{company_name}/topics/visualization")
+def get_company_topic_visualization(company_name: str):
+    """
+    Serve the topic visualization HTML for a specific company.
+    """
+    file_path = DATA_DIR / "nlp_results" / company_name / "topics" / "topic_visualization.html"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Topic visualization for company {company_name} not found")
+    return FileResponse(file_path, media_type="text/html")
 
 @app.get("/api/company/{company_name}/sentiment")
 def get_company_sentiment(company_name: str):

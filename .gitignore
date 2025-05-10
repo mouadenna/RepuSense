@@ -123,8 +123,11 @@ openai_credentials.json
 !tests/data/**/*.csv 
 
 
-data/*/
+# Ignore all files in subdirectories of data/
+data/*/*
 
+# But do not ignore the directories themselves
+!data/*/
 repusense-dashboard/node_modules/
 repusense-dashboard/.next/
 

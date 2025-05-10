@@ -179,6 +179,49 @@ Results are saved in structured JSON format in the following directories:
 
 API-ready data is stored in `data/api_data/{company}/`.
 
+## Dashboard
+
+The project includes a web dashboard built with Next.js, React 18, and Tailwind CSS. To set up and run the dashboard:
+
+1. Navigate to the dashboard directory:
+   ```bash
+   cd dashboard
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   # Or with pnpm:
+   pnpm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+4. Build and start in production:
+   ```bash
+   npm run build
+   npm run start
+   ```
+
+If you encounter Tailwind CSS configuration errors, install the `@tailwindcss/postcss` plugin:
+```bash
+npm install -D @tailwindcss/postcss
+```
+Ensure your `postcss.config.mjs` includes:
+```js
+export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+```
+
+You can set environment variables in a `.env.local` file inside the `dashboard` directory:
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+```
+
 ## Directory Structure
 
 ```

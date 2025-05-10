@@ -124,7 +124,7 @@ Thumbs.db
 # Project specific
 # Modify as needed
 secrets.json
-config_local.json
+config.json
 scrapping script/reddit_credentials.json
 azure_credentials.json
 openai_credentials.json
@@ -138,3 +138,5 @@ openai_credentials.json
 
 
 repusense-dashboard/node_modules/
+repusense-dashboard/.next/
+

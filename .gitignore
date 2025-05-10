@@ -1,0 +1,136 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.env
+.venv
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+
+# Data directories
+data/
+*.csv
+*.json
+*.xml
+*.jsonl
+*.parquet
+*.pkl
+*.h5
+*.bin
+*.vec
+*.model
+*.npy
+*.npz
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# VS Code
+.vscode/
+*.code-workspace
+.history/
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+.idea_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Embeddings & models
+embeddings/
+models/
+saved_models/
+**/word_vectors/
+**/word_embeddings/
+
+# AWS
+.aws/
+aws.xml
+aws-credentials.csv
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+# Modify as needed
+secrets.json
+config_local.json
+scrapping script/reddit_credentials.json
+azure_credentials.json
+openai_credentials.json
+
+# Allow specific data examples to be tracked
+!examples/**/*.json
+!examples/**/*.csv
+!tests/data/**/*.json
+!tests/data/**/*.csv 

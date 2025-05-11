@@ -621,52 +621,24 @@ def schedule_analysis_v1(
         logger.error(f"Error scheduling analysis for company {company}: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# Get request status
-@app.get("/api/v1/status/{request_id}")
-def get_status_v1(request_id: str):
-    """
-    Get the status of a request.
-    
-    - **request_id**: ID of the request to check
-    """
-    try:
-        result = request_processor.get_request_status(request_id)
-        return result
-    except Exception as e:
-        logger.error(f"Error getting status for request {request_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-# List requests
-@app.get("/api/v1/requests")
-def list_requests_v1(
-    company: Optional[str] = None,
-    limit: int = Query(10, gt=0, le=100)
-):
-    """
-    List recent requests.
-    
-    - **company**: Filter by company (optional)
-    - **limit**: Maximum number of requests to return (1-100)
-    """
-    try:
-        result = request_processor.list_requests(company=company, limit=limit)
-        return result
-    except Exception as e:
-        logger.error(f"Error listing requests: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
-# Get configuration
-@app.get("/api/v1/config")
-def get_config():
+
+
+@app.get("/api/recommendations")
+def get_recommendations(company: str):
     """
-    Get the API configuration.
+    Get recommendations for a company.
     """
-    return {
-        "s3_bucket": s3_bucket,
-        "s3_enabled": True,
-        "api_version": "1.0.0",
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"recommendations": ["recommendation1", "recommendation2", "recommendation3"]}
+
+@app.get("/api/alerts")
+def get_alerts(company: str):
+    """
+    Get alerts for a company.
+    """
+    return {"alerts": ["alert1", "alert2", "alert3"]}
+
 
 if __name__ == "__main__":
     import uvicorn
@@ -678,3 +650,5 @@ if __name__ == "__main__":
     
     # Run the API server
     uvicorn.run(app, host="0.0.0.0", port=8000) 
+
+

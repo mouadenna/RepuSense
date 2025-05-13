@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Check, Clock, Database, Facebook, Globe, MessageSquare, Star, Twitter } from "lucide-react"
+import { Check, Clock, Globe, MessageSquare } from "lucide-react"
 
 export function DataSourcesList() {
   const dataSources = [
@@ -24,47 +24,7 @@ export function DataSourcesList() {
       mentions: 2876,
       icon: Globe,
       active: false,
-    },
-    {
-      id: 3,
-      name: "Review Sites",
-      type: "reviews",
-      status: "active",
-      lastCollection: "12 hours ago",
-      mentions: 1543,
-      icon: Star,
-      active: false,
-    },
-    {
-      id: 4,
-      name: "Twitter",
-      type: "social",
-      status: "pending",
-      lastCollection: "Not connected",
-      mentions: 0,
-      icon: Twitter,
-      active: false,
-    },
-    {
-      id: 5,
-      name: "Facebook",
-      type: "social",
-      status: "pending",
-      lastCollection: "Not connected",
-      mentions: 0,
-      icon: Facebook,
-      active: false,
-    },
-    {
-      id: 6,
-      name: "Custom API",
-      type: "custom",
-      status: "inactive",
-      lastCollection: "3 days ago",
-      mentions: 342,
-      icon: Database,
-      active: false,
-    },
+    }
   ]
 
   return (
@@ -103,9 +63,6 @@ export function DataSourcesList() {
           </div>
         </Card>
       ))}
-      <Button variant="outline" size="sm" className="w-full">
-        View archived sources
-      </Button>
     </div>
   )
 }

@@ -1,10 +1,49 @@
+"use client"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { ArrowRight, Clock, Lightbulb, TrendingUp, User } from "lucide-react"
+import { useRecommendation } from "@/contexts/RecommendationContext"
 
 export function RecommendationDetails() {
+  const { selectedRecommendation, loading } = useRecommendation()
+  
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-4 bg-muted rounded w-3/4"></div>
+        <div className="h-20 bg-muted rounded"></div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="h-12 bg-muted rounded"></div>
+          <div className="h-12 bg-muted rounded"></div>
+        </div>
+      </div>
+    )
+  }
+  
+  if (!selectedRecommendation) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-muted-foreground">Select a recommendation to view details</p>
+      </div>
+    )
+  }
+  
+  // Impact score mapping
+  const getImpactLevel = (score: number) => {
+    if (score >= 80) return "High"
+    if (score >= 65) return "Medium"
+    return "Low"
+  }
+  
+  const impactLevel = getImpactLevel(selectedRecommendation.impact_score)
+  
+  // Calculate progress values
+  const progressValue = Math.min(Math.max(selectedRecommendation.impact_score, 0), 100)
+  const sentimentImprovement = Math.round((selectedRecommendation.sentiment_impact.potential - selectedRecommendation.sentiment_impact.current) * 100)
+  
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -12,9 +51,7 @@ export function RecommendationDetails() {
           <div>
             <h3 className="text-sm font-medium mb-2">Recommendation Summary</h3>
             <p className="text-sm text-muted-foreground">
-              Reduce the average customer service response time from 24 hours to under 6 hours by implementing a
-              combination of staffing changes, process improvements, and technology solutions. This recommendation
-              directly addresses the highest priority issue affecting customer satisfaction and brand reputation.
+              {selectedRecommendation.description}
             </p>
           </div>
 
@@ -25,21 +62,21 @@ export function RecommendationDetails() {
                 <div className="text-xs text-muted-foreground">Impact</div>
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="font-medium">High</span>
+                  <span className="font-medium">{impactLevel}</span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Effort</div>
+                <div className="text-xs text-muted-foreground">Impact Score</div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Medium</span>
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{selectedRecommendation.impact_score}/100</span>
                 </div>
               </div>
 
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">Category</div>
-                <Badge variant="secondary">Customer Service</Badge>
+                <Badge variant="secondary">{selectedRecommendation.type}</Badge>
               </div>
 
               <div className="space-y-1">
@@ -50,15 +87,11 @@ export function RecommendationDetails() {
           </div>
 
           <div>
-            <h3 className="text-sm font-medium mb-2">Assigned To</h3>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Sarah Johnson</div>
-                <div className="text-xs text-muted-foreground">Customer Experience Manager</div>
-              </div>
+            <h3 className="text-sm font-medium mb-2">Related Topics</h3>
+            <div className="flex flex-wrap gap-2">
+              {selectedRecommendation.related_topics.map((topic, index) => (
+                <Badge key={index} variant="outline">{topic}</Badge>
+              ))}
             </div>
           </div>
         </div>
@@ -69,64 +102,57 @@ export function RecommendationDetails() {
             <div className="space-y-3">
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Reputation Improvement</span>
-                  <span className="font-medium">75%</span>
+                  <span className="text-muted-foreground">Overall Impact</span>
+                  <span className="font-medium">{progressValue}%</span>
                 </div>
-                <Progress value={75} className="h-2" />
+                <Progress value={progressValue} className="h-2" />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Customer Satisfaction</span>
-                  <span className="font-medium">85%</span>
+                  <span className="text-muted-foreground">Sentiment Improvement</span>
+                  <span className="font-medium">{sentimentImprovement}%</span>
                 </div>
-                <Progress value={85} className="h-2" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Revenue Impact</span>
-                  <span className="font-medium">45%</span>
-                </div>
-                <Progress value={45} className="h-2" />
+                <Progress value={sentimentImprovement} className="h-2" />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium mb-2">Implementation Difficulty</h3>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col items-center p-2 rounded-md bg-green-500/10">
-                <span className="text-xs text-muted-foreground">Cost</span>
-                <span className="text-lg font-bold text-green-500">Medium</span>
+            <h3 className="text-sm font-medium mb-2">Sentiment Impact</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col items-center p-2 rounded-md bg-muted">
+                <span className="text-xs text-muted-foreground">Current</span>
+                <span className={`text-lg font-bold ${selectedRecommendation.sentiment_impact.current < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                  {selectedRecommendation.sentiment_impact.current.toFixed(2)}
+                </span>
               </div>
-              <div className="flex flex-col items-center p-2 rounded-md bg-amber-500/10">
-                <span className="text-xs text-muted-foreground">Time</span>
-                <span className="text-lg font-bold text-amber-500">Medium</span>
-              </div>
-              <div className="flex flex-col items-center p-2 rounded-md bg-blue-500/10">
-                <span className="text-xs text-muted-foreground">Complexity</span>
-                <span className="text-lg font-bold text-blue-500">Medium</span>
+              <div className="flex flex-col items-center p-2 rounded-md bg-muted">
+                <span className="text-xs text-muted-foreground">Potential</span>
+                <span className="text-lg font-bold text-green-500">
+                  {selectedRecommendation.sentiment_impact.potential.toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium mb-2">Key Components</h3>
+            <h3 className="text-sm font-medium mb-2">Implementation Steps</h3>
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
                 <Lightbulb className="h-4 w-4 text-primary mt-0.5" />
-                <span className="text-sm">Increase customer service staff by 30%</span>
+                <span className="text-sm">Analyze customer feedback related to {selectedRecommendation.related_topics[0]}</span>
               </li>
               <li className="flex items-start gap-2">
                 <Lightbulb className="h-4 w-4 text-primary mt-0.5" />
-                <span className="text-sm">Implement automated ticket routing system</span>
+                <span className="text-sm">Develop action plan to address issues</span>
               </li>
               <li className="flex items-start gap-2">
                 <Lightbulb className="h-4 w-4 text-primary mt-0.5" />
-                <span className="text-sm">Deploy AI chatbot for common inquiries</span>
+                <span className="text-sm">Implement changes and monitor results</span>
               </li>
               <li className="flex items-start gap-2">
                 <Lightbulb className="h-4 w-4 text-primary mt-0.5" />
-                <span className="text-sm">Create standardized response templates</span>
+                <span className="text-sm">Measure impact on sentiment and engagement</span>
               </li>
             </ul>
           </div>
@@ -140,7 +166,7 @@ export function RecommendationDetails() {
           Mark as Implemented
         </Button>
         <Button size="sm" className="gap-1">
-          View Implementation Plan
+          Create Implementation Plan
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>

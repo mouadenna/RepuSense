@@ -1,11 +1,18 @@
+"use client";
+
 import { Button } from "@/components/ui/button"
 import { Filter } from "lucide-react"
+import { useCompany } from "@/contexts/CompanyContext"
 
 export function DashboardHeader() {
+  const { selectedCompany } = useCompany();
+  
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Analysis Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {selectedCompany ? `${selectedCompany} Analysis Dashboard` : "Analysis Dashboard"}
+        </h1>
         <p className="text-muted-foreground">Comprehensive e-reputation analysis and actionable insights</p>
       </div>
       <div className="flex items-center gap-2">

@@ -7,6 +7,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { MainNav } from "@/components/main-nav"
 import { SideNav } from "@/components/side-nav"
 import { UserNav } from "@/components/user-nav"
+import { CompanyProvider } from "@/contexts/CompanyContext"
+import LayoutContent from "@/components/layout-content"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,21 +25,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="light">
-          <div className="flex min-h-screen flex-col">
-            <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-6">
-              <MainNav />
-              <div className="ml-auto flex items-center gap-4">
-                <UserNav />
-              </div>
-            </header>
-            <div className="flex flex-1">
-              <SideNav />
-              <main className="flex-1 overflow-auto">{children}</main>
-            </div>
-          </div>
+          <CompanyProvider>
+            <LayoutContent>{children}</LayoutContent>
           <Toaster />
+          </CompanyProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,7 +1,27 @@
 "use client"
-import { Treemap, ResponsiveContainer, Tooltip } from "recharts"
+import { Treemap, ResponsiveContainer, Tooltip, TooltipProps } from "recharts"
 
-const data = [
+interface TreemapData {
+  name: string
+  size: number
+  sentiment: number
+  children?: TreemapData[]
+}
+
+interface CustomizedContentProps {
+  root?: any
+  depth?: number
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  index?: number
+  name?: string
+  sentiment?: number
+  size?: number
+}
+
+const data: TreemapData[] = [
   {
     name: "Customer Service",
     size: 1200,
@@ -56,7 +76,7 @@ const data = [
 
 const COLORS = ["#ef4444", "#f97316", "#a3a3a3", "#22c55e", "#10b981"]
 
-const getSentimentColor = (sentiment) => {
+const getSentimentColor = (sentiment: number) => {
   if (sentiment <= -0.6) return "#ef4444" // Very negative
   if (sentiment <= -0.2) return "#f97316" // Negative
   if (sentiment <= 0.2) return "#a3a3a3" // Neutral
@@ -64,10 +84,10 @@ const getSentimentColor = (sentiment) => {
   return "#10b981" // Very positive
 }
 
-const CustomizedContent = (props) => {
+const CustomizedContent = (props: CustomizedContentProps) => {
   const { root, depth, x, y, width, height, index, name, sentiment, size } = props
 
-  const color = getSentimentColor(sentiment)
+  const color = getSentimentColor(sentiment || 0)
 
   return (
     <g>
@@ -79,14 +99,14 @@ const CustomizedContent = (props) => {
         style={{
           fill: color,
           stroke: "#fff",
-          strokeWidth: 2 / (depth + 1e-10),
-          strokeOpacity: 1 / (depth + 1e-10),
+          strokeWidth: 2 / ((depth || 0) + 1e-10),
+          strokeOpacity: 1 / ((depth || 0) + 1e-10),
         }}
       />
-      {width > 50 && height > 30 && (
+      {width && height && width > 50 && height > 30 && (
         <text
-          x={x + width / 2}
-          y={y + height / 2}
+          x={x && width ? x + width / 2 : 0}
+          y={y && height ? y + height / 2 : 0}
           textAnchor="middle"
           dominantBaseline="middle"
           fill="#fff"
@@ -100,7 +120,12 @@ const CustomizedContent = (props) => {
   )
 }
 
-const CustomTooltip = ({ active, payload }) => {
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: Array<{payload: TreemapData}>
+}
+
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload
     return (
@@ -116,12 +141,12 @@ const CustomTooltip = ({ active, payload }) => {
 
 export function TopicClusterMap() {
   return (
-    <div className="h-[300px] w-full">
+    <div className="h-full w-full min-h-[700px]">
       <ResponsiveContainer width="100%" height="100%">
         <Treemap
           data={data}
           dataKey="size"
-          aspectRatio={4 / 3}
+          aspectRatio={16 / 9}
           stroke="#fff"
           fill="#8884d8"
           content={<CustomizedContent />}

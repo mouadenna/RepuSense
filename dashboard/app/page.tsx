@@ -1,21 +1,95 @@
-import type { Metadata } from "next"
+"use client";
+
 import { AlertCircle, Lightbulb, MessageSquare, PieChart } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SentimentChart } from "@/components/dashboard/sentiment-chart"
 import { TopicClusterMap } from "@/components/dashboard/topic-cluster-map"
 import { RecommendationsList } from "@/components/dashboard/recommendations-list"
-import { ProblemSummary } from "@/components/dashboard/problem-summary"
-import { SourceDistribution } from "@/components/dashboard/source-distribution"
-import { TrendAnalysis } from "@/components/dashboard/trend-analysis"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
-
-export const metadata: Metadata = {
-  title: "Dashboard | RepuSense",
-  description: "Overview of your e-reputation analysis",
-}
+import { LandingPage } from "@/components/landing-page"
+import { useCompany } from "@/contexts/CompanyContext"
+import { useEffect, useState } from "react"
+import { apiService } from "@/lib/api"
+import { EngagementChart } from "@/components/dashboard/engagement-chart"
+import { KeywordsCloud } from "@/components/dashboard/keywords-cloud"
+import { DataSources } from "@/components/dashboard/data-sources"
+import { AlertsList } from "@/components/dashboard/alerts-list"
 
 export default function DashboardPage() {
+  const { isCompanySelected, selectedCompany } = useCompany();
+  const [metrics, setMetrics] = useState({
+    totalMentions: "...",
+    sentimentScore: "...",
+    problemCount: "...",
+    recommendationCount: "..."
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    async function loadDashboardData() {
+      if (!selectedCompany) return;
+      
+      setIsLoading(true);
+      
+      try {
+        // Fetch basic metrics
+        const companyInfo = await apiService.getCompanyInfo(selectedCompany);
+        const sentimentData = await apiService.getCompanySentiment(selectedCompany);
+        const recommendations = await apiService.getCompanyRecommendations(selectedCompany);
+        const alerts = await apiService.getCompanyAlerts(selectedCompany);
+        const contentStats = await apiService.getCompanyContentStats(selectedCompany);
+        
+        // Use content stats if available, fallback to sentiment data length
+        const totalMentions = contentStats ? contentStats.total_content : 
+                             (sentimentData ? sentimentData.length : 0);
+        
+        // Calculate average sentiment score using formula
+        let avgSentiment = 0;
+        if (sentimentData && sentimentData.length > 0) {
+          // Count sentiment categories
+          const counts = {positive: 0, neutral: 0, negative: 0};
+          
+          sentimentData.forEach((item: { sentiment: string }) => {
+            if (item.sentiment) {
+              counts[item.sentiment.toLowerCase() as 'positive' | 'neutral' | 'negative'] = 
+                (counts[item.sentiment.toLowerCase() as 'positive' | 'neutral' | 'negative'] || 0) + 1;
+            }
+          });
+          
+          const total = counts.positive + counts.neutral + counts.negative;
+          if (total > 0) {
+            // Formula: (0.5*neutral% + 1*positive% + 0*negative%)/(total%)
+            avgSentiment = ((0.5 * counts.neutral) + (1.0 * counts.positive) + (0 * counts.negative)) / total;
+            // Scale to 0-10
+            avgSentiment = avgSentiment * 10;
+          }
+        }
+        
+        // Get counts from recommendations and alerts
+        const recCount = recommendations && recommendations.recommendations ? recommendations.recommendations.length : 0;
+        const alertCount = alerts && alerts.alerts ? alerts.alerts.filter((a: any) => a.status === 'active').length : 0;
+        
+        setMetrics({
+          totalMentions: totalMentions.toLocaleString(),
+          sentimentScore: avgSentiment.toFixed(1) + "/10",
+          problemCount: alertCount.toString(),
+          recommendationCount: recCount.toString()
+        });
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    loadDashboardData();
+  }, [selectedCompany]);
+  
+  if (!isCompanySelected) {
+    return <LandingPage />;
+  }
+
   return (
     <div className="container mx-auto p-4 md:p-6">
       <div className="flex flex-col gap-4 md:gap-8">
@@ -24,12 +98,12 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Mentions</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Posts, Articles, Comments</CardTitle>
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12,543</div>
-              <p className="text-xs text-muted-foreground">+18% from previous period</p>
+              <div className="text-2xl font-bold">{metrics.totalMentions}</div>
+              <p className="text-xs text-muted-foreground">From all data sources</p>
             </CardContent>
           </Card>
           <Card>
@@ -38,18 +112,18 @@ export default function DashboardPage() {
               <PieChart className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">6.8/10</div>
-              <p className="text-xs text-muted-foreground">-0.5 from previous period</p>
+              <div className="text-2xl font-bold">{metrics.sentimentScore}</div>
+              <p className="text-xs text-muted-foreground">Overall reputation score</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active Problems</CardTitle>
+              <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
               <AlertCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">7</div>
-              <p className="text-xs text-muted-foreground">3 high priority issues</p>
+              <div className="text-2xl font-bold">{metrics.problemCount}</div>
+              <p className="text-xs text-muted-foreground">{parseInt(metrics.problemCount) > 0 ? `${Math.min(3, parseInt(metrics.problemCount))} high priority issues` : 'No critical issues'}</p>
             </CardContent>
           </Card>
           <Card>
@@ -58,23 +132,22 @@ export default function DashboardPage() {
               <Lightbulb className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
-              <p className="text-xs text-muted-foreground">5 high impact actions</p>
+              <div className="text-2xl font-bold">{metrics.recommendationCount}</div>
+              <p className="text-xs text-muted-foreground">{parseInt(metrics.recommendationCount) > 0 ? `${Math.min(5, parseInt(metrics.recommendationCount))} action items` : 'No recommendations'}</p>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs defaultValue="sentiment" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="problems">Problem Analysis</TabsTrigger>
-            <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
-            <TabsTrigger value="trends">Trend Analysis</TabsTrigger>
+            <TabsTrigger value="sentiment">Sentiment Analysis</TabsTrigger>
+            <TabsTrigger value="topics">Topic Analysis</TabsTrigger>
+            <TabsTrigger value="engagement">Engagement Analysis</TabsTrigger>
+            <TabsTrigger value="keywords">Keywords Analysis</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="col-span-2">
+          <TabsContent value="sentiment" className="space-y-4">
+            <Card>
                 <CardHeader>
                   <CardTitle>Sentiment Analysis</CardTitle>
                   <CardDescription>Distribution of sentiment across all mentions</CardDescription>
@@ -85,74 +158,76 @@ export default function DashboardPage() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>Source Distribution</CardTitle>
-                  <CardDescription>Mentions by platform</CardDescription>
+                <CardTitle>Sentiment-Based Recommendations</CardTitle>
+                <CardDescription>Actions to improve sentiment metrics</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <SourceDistribution />
+                <RecommendationsList extended={false} />
                 </CardContent>
               </Card>
-              <Card className="col-span-2">
+          </TabsContent>
+
+          <TabsContent value="topics" className="space-y-4 w-full">
+            <Card className="w-full max-w-none min-h-[800px] flex flex-col">
                 <CardHeader>
                   <CardTitle>Topic Clusters</CardTitle>
                   <CardDescription>Key discussion topics with sentiment indicators</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0 flex-grow">
                   <TopicClusterMap />
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>Priority Recommendations</CardTitle>
-                  <CardDescription>Top actions to improve reputation</CardDescription>
+                <CardTitle>Data Sources</CardTitle>
+                <CardDescription>Overview of data collected from different platforms</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <RecommendationsList />
+                <DataSources />
                 </CardContent>
               </Card>
-            </div>
           </TabsContent>
 
-          <TabsContent value="problems" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="col-span-3">
+          <TabsContent value="engagement" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Engagement Analysis</CardTitle>
+                <CardDescription>Posts with highest engagement levels</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EngagementChart />
+              </CardContent>
+            </Card>
+            <Card>
                 <CardHeader>
-                  <CardTitle>Problem Summary</CardTitle>
-                  <CardDescription>Identified issues requiring attention</CardDescription>
+                <CardTitle>Priority Alerts</CardTitle>
+                <CardDescription>Potential issues requiring attention</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ProblemSummary />
+                <AlertsList />
                 </CardContent>
               </Card>
-            </div>
           </TabsContent>
 
-          <TabsContent value="recommendations" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="col-span-3">
+          <TabsContent value="keywords" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Keywords Overview</CardTitle>
+                <CardDescription>Most frequent keywords in mentions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <KeywordsCloud />
+              </CardContent>
+            </Card>
+            <Card>
                 <CardHeader>
                   <CardTitle>Strategic Recommendations</CardTitle>
-                  <CardDescription>Actionable insights to improve your e-reputation</CardDescription>
+                <CardDescription>Actionable insights related to trending keywords</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <RecommendationsList extended={true} />
                 </CardContent>
               </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="trends" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="col-span-3">
-                <CardHeader>
-                  <CardTitle>Reputation Trend Analysis</CardTitle>
-                  <CardDescription>Historical patterns and future projections</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <TrendAnalysis />
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
       </div>

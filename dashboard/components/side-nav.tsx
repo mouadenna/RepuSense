@@ -4,18 +4,20 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   AlertCircle,
-  BarChart3,
-  FileText,
   LayoutDashboard,
   Lightbulb,
   MessageSquare,
-  Settings,
-  TrendingUp,
-  Users,
 } from "lucide-react"
+import { useCompany } from "@/contexts/CompanyContext"
 
 export function SideNav() {
   const pathname = usePathname()
+  const { isCompanySelected } = useCompany()
+
+  // If no company is selected, don't render the sidebar
+  if (!isCompanySelected) {
+    return null
+  }
 
   const isActive = (path: string) => {
     if (path === "/" && pathname === "/") return true
@@ -43,32 +45,7 @@ export function SideNav() {
       name: "Data Sources",
       href: "/data-management",
       icon: MessageSquare,
-    },
-    {
-      name: "Reports",
-      href: "/reports",
-      icon: FileText,
-    },
-    {
-      name: "Competitors",
-      href: "/competitors",
-      icon: Users,
-    },
-    {
-      name: "Analytics",
-      href: "/analytics",
-      icon: BarChart3,
-    },
-    {
-      name: "Trends",
-      href: "/trends",
-      icon: TrendingUp,
-    },
-    {
-      name: "Settings",
-      href: "/settings",
-      icon: Settings,
-    },
+    }
   ]
 
   return (

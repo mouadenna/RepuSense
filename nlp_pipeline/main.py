@@ -6,6 +6,7 @@ import argparse
 import boto3
 from pathlib import Path
 from datetime import datetime
+import shutil
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -343,6 +344,14 @@ class NLPPipeline:
             dest_path = api_data_dir / "wordcloud.json"
             self._copy_json_file(source_path, dest_path)
             api_data['wordcloud'] = dest_path
+            
+            # Copy wordcloud image if it exists
+            if 'keyword_extraction' in self.results and 'wordcloud_image' in self.results['keyword_extraction']:
+                source_image_path = self.results['keyword_extraction']['wordcloud_image']
+                if os.path.isfile(source_image_path):
+                    dest_image_path = api_data_dir / "wordcloud.png"
+                    shutil.copy2(source_image_path, dest_image_path)
+                    api_data['wordcloud_image'] = dest_image_path
         
         # Create a company info file
         company_info_path = api_data_dir / "company_info.json"

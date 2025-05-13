@@ -1,3 +1,5 @@
+"use client"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,8 +12,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Bell } from "lucide-react"
+import { useCompany } from "@/contexts/CompanyContext"
 
 export function UserNav() {
+  const { isCompanySelected } = useCompany()
+  
+  // Don't render the user nav if no company is selected
+  if (!isCompanySelected) {
+    return null
+  }
+  
   return (
     <div className="flex items-center gap-4">
       <Button variant="outline" size="icon" className="relative">
@@ -40,7 +50,6 @@ export function UserNav() {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuItem>Billing</DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />

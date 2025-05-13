@@ -1,10 +1,59 @@
+"use client"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
-import { AlertCircle, ArrowRight, Calendar, MessageSquare, TrendingDown, User } from "lucide-react"
+import { AlertCircle, ArrowRight, Calendar, MessageSquare } from "lucide-react"
+import { useIssue } from "@/contexts/IssueContext"
 
 export function IssueDetails() {
+  const { selectedIssue, loading } = useIssue()
+  
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-4 bg-muted rounded w-3/4"></div>
+        <div className="h-20 bg-muted rounded"></div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="h-12 bg-muted rounded"></div>
+          <div className="h-12 bg-muted rounded"></div>
+        </div>
+      </div>
+    )
+  }
+  
+  if (!selectedIssue) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-muted-foreground">Select an issue to view details</p>
+      </div>
+    )
+  }
+  
+  // Format the date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    })
+  }
+  
+  // Convert severity to impact percentages
+  const getSeverityImpact = (severity: string) => {
+    switch (severity) {
+      case "critical": return { reputation: 95, satisfaction: 90, revenue: 85 }
+      case "high": return { reputation: 80, satisfaction: 75, revenue: 65 }
+      case "medium": return { reputation: 60, satisfaction: 55, revenue: 40 }
+      case "low": return { reputation: 30, satisfaction: 25, revenue: 15 }
+      default: return { reputation: 50, satisfaction: 45, revenue: 30 }
+    }
+  }
+  
+  const impact = getSeverityImpact(selectedIssue.severity)
+  
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -12,10 +61,7 @@ export function IssueDetails() {
           <div>
             <h3 className="text-sm font-medium mb-2">Issue Summary</h3>
             <p className="text-sm text-muted-foreground">
-              Average customer service response time of 24 hours is causing significant customer frustration and
-              negative reviews. This issue has been consistently mentioned across multiple platforms, with particular
-              emphasis on social media and review sites. The slow response time is leading to customer churn and
-              damaging brand reputation.
+              {selectedIssue.description}
             </p>
           </div>
 
@@ -23,43 +69,37 @@ export function IssueDetails() {
             <h3 className="text-sm font-medium mb-2">Key Metrics</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Mentions</div>
+                <div className="text-xs text-muted-foreground">Source</div>
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">342</span>
-                  <TrendingDown className="h-4 w-4 text-red-500 rotate-180" />
+                  <span className="font-medium">{selectedIssue.source}</span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">First Detected</div>
+                <div className="text-xs text-muted-foreground">Detected</div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Mar 15, 2023</span>
+                  <span className="font-medium">{formatDate(selectedIssue.created_at)}</span>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Category</div>
-                <Badge variant="secondary">Customer Service</Badge>
+                <div className="text-xs text-muted-foreground">Severity</div>
+                <Badge 
+                  variant={selectedIssue.severity === "critical" || selectedIssue.severity === "high" 
+                    ? "destructive" 
+                    : selectedIssue.severity === "medium" 
+                      ? "outline" 
+                      : "secondary"}
+                >
+                  {selectedIssue.severity}
+                </Badge>
               </div>
 
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">Status</div>
-                <Badge variant="outline">Active</Badge>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-medium mb-2">Assigned To</h3>
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Sarah Johnson</div>
-                <div className="text-xs text-muted-foreground">Customer Experience Manager</div>
+                <Badge variant="outline">{selectedIssue.status}</Badge>
               </div>
             </div>
           </div>
@@ -72,59 +112,45 @@ export function IssueDetails() {
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Reputation Impact</span>
-                  <span className="font-medium">85%</span>
+                  <span className="font-medium">{impact.reputation}%</span>
                 </div>
-                <Progress value={85} className="h-2" />
+                <Progress value={impact.reputation} className="h-2" />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Customer Satisfaction Impact</span>
-                  <span className="font-medium">78%</span>
+                  <span className="font-medium">{impact.satisfaction}%</span>
                 </div>
-                <Progress value={78} className="h-2" />
+                <Progress value={impact.satisfaction} className="h-2" />
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Revenue Impact</span>
-                  <span className="font-medium">62%</span>
+                  <span className="font-medium">{impact.revenue}%</span>
                 </div>
-                <Progress value={62} className="h-2" />
+                <Progress value={impact.revenue} className="h-2" />
               </div>
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-medium mb-2">Sentiment Distribution</h3>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col items-center p-2 rounded-md bg-red-500/10">
-                <span className="text-xs text-muted-foreground">Negative</span>
-                <span className="text-lg font-bold text-red-500">76%</span>
-              </div>
-              <div className="flex flex-col items-center p-2 rounded-md bg-gray-500/10">
-                <span className="text-xs text-muted-foreground">Neutral</span>
-                <span className="text-lg font-bold text-gray-500">18%</span>
-              </div>
-              <div className="flex flex-col items-center p-2 rounded-md bg-green-500/10">
-                <span className="text-xs text-muted-foreground">Positive</span>
-                <span className="text-lg font-bold text-green-500">6%</span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-medium mb-2">Priority Recommendations</h3>
+            <h3 className="text-sm font-medium mb-2">Suggested Actions</h3>
             <ul className="space-y-2">
               <li className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-primary mt-0.5" />
-                <span className="text-sm">Implement 24/7 customer service team</span>
+                <span className="text-sm">Investigate root causes immediately</span>
               </li>
               <li className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-primary mt-0.5" />
-                <span className="text-sm">Deploy AI-powered chatbot for common inquiries</span>
+                <span className="text-sm">Prepare communication strategy</span>
               </li>
               <li className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-primary mt-0.5" />
-                <span className="text-sm">Establish 6-hour response time SLA</span>
+                <span className="text-sm">Develop action plan to address the issue</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-primary mt-0.5" />
+                <span className="text-sm">Monitor sentiment changes after response</span>
               </li>
             </ul>
           </div>

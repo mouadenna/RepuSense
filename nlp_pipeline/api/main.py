@@ -8,8 +8,8 @@ import sys
 
 from fastapi import FastAPI, HTTPException, Query, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.responses import FileResponse  # added for serving HTML files
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 # Import the request processor
@@ -154,20 +154,6 @@ def get_available_companies():
                 companies.append({"name": company_dir.name})
     return companies
 
-# Background task to process analysis request
-def process_analysis_request_task(request: AnalysisRequest):
-    # Convert date objects to strings
-    start_date = request.start_date.isoformat() if request.start_date else None
-    end_date = request.end_date.isoformat() if request.end_date else None
-    
-    # Process the request
-    request_processor.process_request_sync(
-        company=request.company,
-        start_date=start_date,
-        end_date=end_date,
-        keyword=request.keyword
-    )
-
 # API Routes
 @app.get("/")
 def read_root():
@@ -177,140 +163,37 @@ def read_root():
         "version": "1.0.0"
     }
 
+@app.get("/api/companies")
+def get_companies():
+    """
+    Get the list of available analyzed companies.
+    """
+    return get_available_companies()
 
 @app.get("/api/company/{company_name}")
 def get_company_info(company_name: str):
     """
     Get information about a specific company.
-    
-    Args:
-        company_name: Name of the company
-    
-    Returns:
-        Company information
     """
     company_info = load_json_data("company_info.json", company_name)
     if company_info is None:
         raise HTTPException(status_code=404, detail=f"Company {company_name} not found")
     return company_info
 
-@app.get("/api/topics")
-def get_topics(company: Optional[str] = Query(None, description="Company name filter")):
-    """
-    Get topic distribution data.
-    
-    Args:
-        company: Optional company name filter
-    
-    Returns:
-        List of topics with their counts
-    """
-    data = load_json_data("topics.json", company)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Topic data not found")
-    return data
-
-@app.get("/api/sentiment")
-def get_sentiment(company: Optional[str] = Query(None, description="Company name filter")):
-    """
-    Get sentiment analysis data.
-    
-    Args:
-        company: Optional company name filter
-    
-    Returns:
-        List of post sentiment analysis results
-    """
-    data = load_json_data("sentiment.json", company)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Sentiment data not found")
-    return data
-
-@app.get("/api/keywords")
-def get_keywords(company: Optional[str] = Query(None, description="Company name filter")):
-    """
-    Get keyword extraction data.
-    
-    Args:
-        company: Optional company name filter
-    
-    Returns:
-        List of posts with their extracted keywords
-    """
-    data = load_json_data("keywords.json", company)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Keyword data not found")
-    return data
-
-@app.get("/api/engagement")
-def get_engagement(company: Optional[str] = Query(None, description="Company name filter")):
-    """
-    Get comment engagement data.
-    
-    Args:
-        company: Optional company name filter
-    
-    Returns:
-        List of posts with their comment counts
-    """
-    data = load_json_data("engagement.json", company)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Engagement data not found")
-    return data
-
-@app.get("/api/wordcloud")
-def get_wordcloud(company: Optional[str] = Query(None, description="Company name filter")):
-    """
-    Get word cloud data.
-    
-    Args:
-        company: Optional company name filter
-    
-    Returns:
-        List of words with their frequencies
-    """
-    data = load_json_data("wordcloud.json", company)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Word cloud data not found")
-    return data
-
-# Company-specific endpoints
 @app.get("/api/company/{company_name}/topics")
 def get_company_topics(company_name: str):
     """
     Get topic distribution for a specific company.
-    
-    Args:
-        company_name: Name of the company
-    
-    Returns:
-        List of topics with their counts
     """
     data = load_json_data("topics.json", company_name)
     if data is None:
         raise HTTPException(status_code=404, detail=f"Topic data for company {company_name} not found")
     return data
 
-@app.get("/api/company/{company_name}/topics/visualization")
-def get_company_topic_visualization(company_name: str):
-    """
-    Serve the topic visualization HTML for a specific company.
-    """
-    file_path = DATA_DIR / "nlp_results" / company_name / "topics" / "topic_visualization.html"
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"Topic visualization for company {company_name} not found")
-    return FileResponse(file_path, media_type="text/html")
-
 @app.get("/api/company/{company_name}/sentiment")
 def get_company_sentiment(company_name: str):
     """
     Get sentiment analysis for a specific company.
-    
-    Args:
-        company_name: Name of the company
-    
-    Returns:
-        List of sentiment analysis results
     """
     data = load_json_data("sentiment.json", company_name)
     if data is None:
@@ -321,12 +204,6 @@ def get_company_sentiment(company_name: str):
 def get_company_keywords(company_name: str):
     """
     Get keywords for a specific company.
-    
-    Args:
-        company_name: Name of the company
-    
-    Returns:
-        List of keyword extraction results
     """
     data = load_json_data("keywords.json", company_name)
     if data is None:
@@ -337,12 +214,6 @@ def get_company_keywords(company_name: str):
 def get_company_engagement(company_name: str):
     """
     Get engagement for a specific company.
-    
-    Args:
-        company_name: Name of the company
-    
-    Returns:
-        List of engagement analysis results
     """
     data = load_json_data("engagement.json", company_name)
     if data is None:
@@ -353,96 +224,44 @@ def get_company_engagement(company_name: str):
 def get_company_wordcloud(company_name: str):
     """
     Get word cloud for a specific company.
-    
-    Args:
-        company_name: Name of the company
-    
-    Returns:
-        List of words with their frequencies
     """
     data = load_json_data("wordcloud.json", company_name)
     if data is None:
         raise HTTPException(status_code=404, detail=f"Word cloud data for company {company_name} not found")
     return data
 
-# Post-specific endpoints
-@app.get("/api/company/{company_name}/post/{post_id}/sentiment")
-def get_post_sentiment(company_name: str, post_id: int):
+@app.get("/api/company/{company_name}/wordcloud-image")
+def get_company_wordcloud_image(company_name: str):
     """
-    Get sentiment for a specific post.
-    
-    Args:
-        company_name: Name of the company
-        post_id: ID of the post
-    
-    Returns:
-        Sentiment analysis result for the post
+    Get word cloud image for a specific company.
     """
-    data = load_json_data("sentiment.json", company_name)
-    if data is None:
-        raise HTTPException(status_code=404, detail=f"Sentiment data for company {company_name} not found")
-    
-    for item in data:
-        if item.get("post_id") == post_id:
-            return item
-    
-    raise HTTPException(status_code=404, detail=f"Sentiment data for post {post_id} not found")
+    image_path = DATA_DIR / "nlp_results" / company_name / "keywords" / "wordcloud.png"
+    if not image_path.exists():
+        raise HTTPException(status_code=404, detail=f"Word cloud image for company {company_name} not found")
+    return FileResponse(image_path, media_type="image/png")
 
-@app.get("/api/company/{company_name}/post/{post_id}/keywords")
-def get_post_keywords(company_name: str, post_id: int):
+@app.get("/api/company/{company_name}/topics/visualization-html")
+def get_company_topic_visualization_html(company_name: str):
     """
-    Get keywords for a specific post.
-    
-    Args:
-        company_name: Name of the company
-        post_id: ID of the post
-    
-    Returns:
-        Keywords for the post
+    Get the HTML visualization file for company topics.
     """
-    data = load_json_data("keywords.json", company_name)
-    if data is None:
-        raise HTTPException(status_code=404, detail=f"Keyword data for company {company_name} not found")
+    visualization_path = DATA_DIR / "nlp_results" / company_name / "topics" / "topic_visualization.html"
     
-    for item in data:
-        if item.get("post_id") == post_id:
-            return item
+    if not visualization_path.exists():
+        raise HTTPException(status_code=404, detail=f"Topic visualization for {company_name} not found")
     
-    raise HTTPException(status_code=404, detail=f"Keyword data for post {post_id} not found")
+    try:
+        with open(visualization_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content, status_code=200)
+    except Exception as e:
+        logger.error(f"Error reading topic visualization HTML: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading visualization file")
 
-@app.get("/api/company/{company_name}/post/{post_id}/engagement")
-def get_post_engagement(company_name: str, post_id: int):
-    """
-    Get engagement for a specific post.
-    
-    Args:
-        company_name: Name of the company
-        post_id: ID of the post
-    
-    Returns:
-        Engagement data for the post
-    """
-    data = load_json_data("engagement.json", company_name)
-    if data is None:
-        raise HTTPException(status_code=404, detail=f"Engagement data for company {company_name} not found")
-    
-    for item in data:
-        if item.get("post_id") == post_id:
-            return item
-    
-    raise HTTPException(status_code=404, detail=f"Engagement data for post {post_id} not found")
-
-# Analysis request endpoints
 @app.post("/api/analyze", response_model=AnalysisResponse)
 async def analyze_company(request: AnalysisRequest, background_tasks: BackgroundTasks):
     """
     Trigger analysis for a company.
-    
-    Args:
-        request: Analysis request details
-    
-    Returns:
-        Request status
     """
     # Convert date objects to strings
     start_date = request.start_date.isoformat() if request.start_date else None
@@ -473,16 +292,24 @@ async def analyze_company(request: AnalysisRequest, background_tasks: Background
     
     return status
 
+# Background task to process analysis request
+def process_analysis_request_task(request: AnalysisRequest):
+    # Convert date objects to strings
+    start_date = request.start_date.isoformat() if request.start_date else None
+    end_date = request.end_date.isoformat() if request.end_date else None
+    
+    # Process the request
+    request_processor.process_request_sync(
+        company=request.company,
+        start_date=start_date,
+        end_date=end_date,
+        keyword=request.keyword
+    )
+
 @app.get("/api/analyze/{request_id}")
 def get_analysis_status(request_id: str):
     """
     Get status of an analysis request.
-    
-    Args:
-        request_id: ID of the request
-    
-    Returns:
-        Request status
     """
     status = request_processor.get_request_status(request_id)
     if status['status'] == 'unknown':
@@ -490,155 +317,190 @@ def get_analysis_status(request_id: str):
     
     return status
 
-@app.get("/api/requests")
-def list_analysis_requests(company: Optional[str] = Query(None), limit: int = Query(10, gt=0, lt=100)):
-    """
-    List recent analysis requests.
-    
-    Args:
-        company: Filter by company (optional)
-        limit: Maximum number of requests to return
-    
-    Returns:
-        List of requests
-    """
-    return request_processor.list_requests(company=company, limit=limit)
-
-# Legacy endpoints for backward compatibility
-@app.get("/api/post/{post_id}/sentiment")
-def get_legacy_post_sentiment(post_id: int, company: Optional[str] = Query(None)):
-    """
-    Get sentiment for a specific post (legacy endpoint).
-    
-    Args:
-        post_id: ID of the post
-        company: Optional company name filter
-    
-    Returns:
-        Sentiment analysis result for the post
-    """
-    data = load_json_data("sentiment.json", company)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Sentiment data not found")
-    
-    for item in data:
-        if item.get("post_id") == post_id:
-            return item
-    
-    raise HTTPException(status_code=404, detail=f"Sentiment data for post {post_id} not found")
-
-@app.get("/api/post/{post_id}/keywords")
-def get_legacy_post_keywords(post_id: int, company: Optional[str] = Query(None)):
-    """
-    Get keywords for a specific post (legacy endpoint).
-    
-    Args:
-        post_id: ID of the post
-        company: Optional company name filter
-    
-    Returns:
-        Keywords for the post
-    """
-    data = load_json_data("keywords.json", company)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Keyword data not found")
-    
-    for item in data:
-        if item.get("post_id") == post_id:
-            return item
-    
-    raise HTTPException(status_code=404, detail=f"Keyword data for post {post_id} not found")
-
-@app.get("/api/post/{post_id}/engagement")
-def get_legacy_post_engagement(post_id: int, company: Optional[str] = Query(None)):
-    """
-    Get engagement for a specific post (legacy endpoint).
-    
-    Args:
-        post_id: ID of the post
-        company: Optional company name filter
-    
-    Returns:
-        Engagement data for the post
-    """
-    data = load_json_data("engagement.json", company)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Engagement data not found")
-    
-    for item in data:
-        if item.get("post_id") == post_id:
-            return item
-    
-    raise HTTPException(status_code=404, detail=f"Engagement data for post {post_id} not found")
-
-# Process a company synchronously
-@app.post("/api/v1/analyze")
-def analyze_company_v1(
-    company: str,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
-):
-    """
-    Analyze a company's reputation on Reddit.
-    
-    - **company**: Name of the company to analyze
-    - **start_date**: Start date in YYYY-MM-DD format (optional)
-    - **end_date**: End date in YYYY-MM-DD format (optional)
-    """
-    try:
-        result = request_processor.process_request_sync(
-            company=company,
-            start_date=start_date,
-            end_date=end_date
-        )
-        return result
-    except Exception as e:
-        logger.error(f"Error analyzing company {company}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-# Schedule a company analysis
-@app.post("/api/v1/schedule")
-def schedule_analysis_v1(
-    company: str,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None
-):
-    """
-    Schedule a company reputation analysis.
-    
-    - **company**: Name of the company to analyze
-    - **start_date**: Start date in YYYY-MM-DD format (optional)
-    - **end_date**: End date in YYYY-MM-DD format (optional)
-    """
-    try:
-        result = request_processor.process_request_async(
-            company=company,
-            start_date=start_date,
-            end_date=end_date
-        )
-        return result
-    except Exception as e:
-        logger.error(f"Error scheduling analysis for company {company}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
-
 @app.get("/api/recommendations")
 def get_recommendations(company: str):
     """
     Get recommendations for a company.
     """
-    return {"recommendations": ["recommendation1", "recommendation2", "recommendation3"]}
+    recommendations = [
+        {
+            "id": 1,
+            "type": "high",
+            "title": "Improve customer service response time",
+            "description": "Analysis shows that customers frequently complain about slow response times. Consider implementing a faster response protocol for customer support channels.",
+            "impact_score": 85,
+            "related_topics": ["customer service", "support", "response time"],
+            "sentiment_impact": {
+                "current": -0.32,
+                "potential": 0.15
+            }
+        },
+        {
+            "id": 2,
+            "type": "medium",
+            "title": "Highlight positive product features in marketing",
+            "description": "Customers frequently praise specific product features that aren't prominently featured in current marketing. Consider highlighting these features in upcoming campaigns.",
+            "impact_score": 72,
+            "related_topics": ["marketing", "product features", "advertising"],
+            "sentiment_impact": {
+                "current": 0.05,
+                "potential": 0.25
+            }
+        },
+        {
+            "id": 3,
+            "type": "high",
+            "title": "Address pricing concerns on premium plans",
+            "description": "Significant negative sentiment is associated with premium plan pricing. Consider reviewing competitive pricing or better communicating value proposition.",
+            "impact_score": 79,
+            "related_topics": ["pricing", "premium plans", "subscription"],
+            "sentiment_impact": {
+                "current": -0.41,
+                "potential": 0.10
+            }
+        },
+        {
+            "id": 4,
+            "type": "low",
+            "title": "Enhance mobile app user experience",
+            "description": "Users report various usability issues with the mobile application. Consider conducting usability testing and implementing UX improvements.",
+            "impact_score": 63,
+            "related_topics": ["mobile app", "user experience", "usability"],
+            "sentiment_impact": {
+                "current": -0.18,
+                "potential": 0.22
+            }
+        },
+        {
+            "id": 5,
+            "type": "medium",
+            "title": "Improve product documentation and tutorials",
+            "description": "Analysis shows that users struggle with understanding product features due to insufficient documentation. Creating better guides and tutorials could help adoption.",
+            "impact_score": 68,
+            "related_topics": ["documentation", "tutorials", "user education"],
+            "sentiment_impact": {
+                "current": -0.12,
+                "potential": 0.30
+            }
+        }
+    ]
+    
+    return {"recommendations": recommendations}
 
 @app.get("/api/alerts")
 def get_alerts(company: str):
     """
     Get alerts for a company.
     """
-    return {"alerts": ["alert1", "alert2", "alert3"]}
+    alerts = [
+        {
+            "id": 1,
+            "severity": "critical",
+            "title": "Significant increase in negative sentiment",
+            "description": "There has been a 35% increase in negative sentiment about your brand in the last 48 hours, primarily regarding recent service outages.",
+            "source": "Reddit",
+            "created_at": "2023-12-02T09:15:23Z",
+            "status": "active"
+        },
+        {
+            "id": 2,
+            "severity": "high",
+            "title": "Potential PR crisis emerging",
+            "description": "Multiple news outlets are reporting on allegations about your company's environmental practices. This is gaining traction across social media.",
+            "source": "News Articles",
+            "created_at": "2023-12-01T16:42:11Z",
+            "status": "active"
+        },
+        {
+            "id": 3,
+            "severity": "medium",
+            "title": "Competitor campaign gaining attention",
+            "description": "Your main competitor's new marketing campaign is receiving positive engagement and mentions have increased by 62% this week.",
+            "source": "News Articles",
+            "created_at": "2023-11-30T14:20:45Z",
+            "status": "active"
+        },
+        {
+            "id": 4,
+            "severity": "low",
+            "title": "Feature request trend identified",
+            "description": "There's a growing trend of customers requesting a specific feature enhancement for your mobile application across multiple platforms.",
+            "source": "Reddit",
+            "created_at": "2023-11-28T11:05:32Z",
+            "status": "resolved"
+        },
+        {
+            "id": 5,
+            "severity": "high",
+            "title": "Security concern being discussed",
+            "description": "Technical users are discussing a potential security vulnerability in your product on specialized forums and Reddit threads.",
+            "source": "Reddit",
+            "created_at": "2023-12-03T08:35:17Z",
+            "status": "active"
+        }
+    ]
+    
+    return {"alerts": alerts}
 
+@app.get("/api/company/{company_name}/data-sources")
+def get_company_data_sources(company_name: str):
+    """
+    Get data sources for a specific company.
+    """
+    # Dummy data for data sources
+    data_sources = [
+        {
+            "name": "Reddit",
+            "post_count": 237,
+            "comment_count": 1582,
+            "sentiment_distribution": {
+                "positive": 45,
+                "neutral": 30,
+                "negative": 25
+            },
+            "last_updated": "2023-12-01T12:00:00Z"
+        },
+        {
+            "name": "News Articles",
+            "post_count": 87,
+            "comment_count": 342,
+            "sentiment_distribution": {
+                "positive": 52,
+                "neutral": 33,
+                "negative": 15
+            },
+            "last_updated": "2023-12-03T15:45:00Z"
+        }
+    ]
+    
+    return data_sources
+
+@app.get("/api/company/{company_name}/content-stats")
+def get_company_content_stats(company_name: str):
+    """
+    Get content statistics for a specific company.
+    """
+    # Reuse data from data sources to calculate totals (Reddit and News Articles)
+    data_sources = get_company_data_sources(company_name)
+    
+    # Calculate total posts, articles, and comments
+    total_posts = sum(source["post_count"] for source in data_sources if "post_count" in source)
+    total_comments = sum(source["comment_count"] for source in data_sources if "comment_count" in source)
+    
+    # Get articles count (from News Articles source)
+    articles_source = next((source for source in data_sources if source["name"] == "News Articles"), None)
+    total_articles = articles_source["post_count"] if articles_source else 0
+    
+    # Calculate total social media posts (from Reddit)
+    social_posts = total_posts - total_articles
+    
+    return {
+        "total_content": total_posts + total_comments,
+        "posts": social_posts,
+        "articles": total_articles,
+        "comments": total_comments,
+        "by_source": {source["name"]: source["post_count"] + source["comment_count"] for source in data_sources}
+    }
 
 if __name__ == "__main__":
     import uvicorn

@@ -327,10 +327,8 @@ class KeywordExtractor:
             img_buf.seek(0)
             plt.close()
             
-            # Enc
-            
             logger.info(f"Successfully saved word cloud visualization to: {self.output_dir}")
-            return self.output_dir
+            return img_path
         
         except Exception as e:
             logger.error(f"Error creating word cloud visualization: {str(e)}")
@@ -356,18 +354,23 @@ class KeywordExtractor:
         # Extract keywords
         result_df = self.extract_keywords_batch(data_df, top_n=top_n)
         
-        # Save the results
-        results = {}
-        results['keyword_results'] = self.save_keyword_results(result_df)
-        results['word_cloud_data'] = self.save_word_cloud_data(result_df)
-        results['word_cloud_visualization'] = self.create_word_cloud(result_df)
+        # Save keyword extraction results
+        keyword_results_path = self.save_keyword_results(result_df)
         
-        # Save the full results
-        output_path = self.output_dir / "documents_with_keywords.json"
-        result_df.to_json(output_path, orient='records', indent=2)
-        results['documents_with_keywords'] = output_path
+        # Save word cloud data
+        word_cloud_data_path = self.save_word_cloud_data(result_df)
         
-        logger.info("Keyword extraction complete")
+        # Create word cloud visualization
+        wordcloud_image_path = self.create_word_cloud(result_df)
+        
+        results = {
+            'keyword_df': result_df,
+            'keyword_results': keyword_results_path,
+            'word_cloud_data': word_cloud_data_path,
+            'wordcloud_image': wordcloud_image_path
+        }
+        
+        logger.info("Keyword extraction completed successfully")
         return results
 
 if __name__ == "__main__":
@@ -383,7 +386,7 @@ if __name__ == "__main__":
         for key, path in results.items():
             print(f"- {key}: {path}")
         print("\nWord cloud visualization created at:")
-        print(results['word_cloud_visualization'])
+        print(results['wordcloud_image'])
     else:
         print(f"Data file not found at: {nlp_data_path}")
         print("Run data_preprocessor.py first to prepare the data.") 

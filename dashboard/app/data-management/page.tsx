@@ -3,9 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DataSourcesList } from "@/components/data-management/data-sources-list"
-import { DataSourceSettings } from "@/components/data-management/data-source-settings"
-import { CollectionSchedule } from "@/components/data-management/collection-schedule"
-import { DataQuality } from "@/components/data-management/data-quality"
+import { RedditSourceSettings, NewsSourceSettings } from "@/components/data-management/data-source-settings"
 import { Plus } from "lucide-react"
 
 export const metadata: Metadata = {
@@ -36,33 +34,56 @@ export default function DataManagementPage() {
           </div>
 
           <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Reddit Data Source</CardTitle>
-                <CardDescription>Configure settings for Reddit data collection</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="settings" className="space-y-4">
-                  <TabsList>
-                    <TabsTrigger value="settings">Settings</TabsTrigger>
-                    <TabsTrigger value="schedule">Collection Schedule</TabsTrigger>
-                    <TabsTrigger value="quality">Data Quality</TabsTrigger>
-                  </TabsList>
+            <Tabs defaultValue="reddit" className="space-y-4">
+              <TabsList className="grid grid-cols-2">
+                <TabsTrigger value="reddit">Reddit</TabsTrigger>
+                <TabsTrigger value="news">News Sites</TabsTrigger>
+              </TabsList>
 
-                  <TabsContent value="settings">
-                    <DataSourceSettings />
-                  </TabsContent>
+              <TabsContent value="reddit">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Reddit Data Source</CardTitle>
+                    <CardDescription>Configure settings for Reddit data collection</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Tabs defaultValue="settings" className="space-y-4">
+                      <TabsList>
+                        <TabsTrigger value="settings">Settings</TabsTrigger>
+                        <TabsTrigger value="schedule">Collection Schedule</TabsTrigger>
+                        <TabsTrigger value="quality">Data Quality</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="settings">
+                        <RedditSourceSettings />
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                  <TabsContent value="schedule">
-                    <CollectionSchedule />
-                  </TabsContent>
-
-                  <TabsContent value="quality">
-                    <DataQuality />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+              <TabsContent value="news">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>News Sites Data Source</CardTitle>
+                    <CardDescription>Configure settings for News Sites data collection</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Tabs defaultValue="settings" className="space-y-4">
+                      <TabsList>
+                        <TabsTrigger value="settings">Settings</TabsTrigger>
+                        <TabsTrigger value="schedule">Collection Schedule</TabsTrigger>
+                        <TabsTrigger value="quality">Data Quality</TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="settings">
+                        <NewsSourceSettings />
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.github
+*.md
+.gitignore
+dashboard/.next
+dashboard/node_modules
+dashboard/.git
+data/
+nlp_pipeline/
+scrapping script/
+airflow/
+run_pipeline.py 

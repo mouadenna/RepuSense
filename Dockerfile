@@ -1,29 +1,58 @@
-FROM node:18-alpine
-
+FROM node:18-alpine AS deps
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Copy package files
 COPY dashboard/package.json dashboard/package-lock.json ./
 RUN npm ci
 
-# Copy the rest of the dashboard application
+# Build the Next.js application
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# Copy dependencies
+COPY --from=deps /app/node_modules ./node_modules
 COPY dashboard/ ./
 
 # Set environment variables
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV production
+ENV NEXT_PUBLIC_API_ENDPOINT https://api.repusense.com
+ENV NEXT_PUBLIC_DEFAULT_COMPANY inwi
 
-# Create a custom next.config.mjs to disable static generation
-RUN echo 'const nextConfig = { output: "standalone", images: { unoptimized: true }, eslint: { ignoreDuringBuilds: true }, typescript: { ignoreBuildErrors: true } }; export default nextConfig;' > next.config.mjs
+# Use custom next.config.mjs that disables static generation
+RUN echo 'const nextConfig = { output: "standalone", reactStrictMode: true, swcMinify: true, images: { unoptimized: true }, eslint: { ignoreDuringBuilds: true }, typescript: { ignoreBuildErrors: true }, experimental: { serverComponentsExternalPackages: [] } }; export default nextConfig;' > next.config.mjs
 
-# Create a custom .env file to define API endpoint
-RUN echo 'NEXT_PUBLIC_API_ENDPOINT=https://api.repusense.com' > .env.local
-
-# Build the Next.js application with the export option disabled
+# Create a production build
 RUN npm run build
 
-# Expose the port that Next.js runs on
+# Production image
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+# Set environment variables
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_PUBLIC_API_ENDPOINT https://api.repusense.com
+ENV NEXT_PUBLIC_DEFAULT_COMPANY inwi
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy necessary files from builder
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Set user
+USER nextjs
+
+# Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"] 
+# Set environment variable for listening on all interfaces
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# Start the server
+CMD ["node", "server.js"] 

@@ -122,11 +122,7 @@ openai_credentials.json
 !tests/data/**/*.json
 !tests/data/**/*.csv 
 
-# Ignore all files in subdirectories of data/
-data/*/*
 
-# But keep folders
-!data/*/
 
 # And keep .gitkeep files
 !data/*/.gitkeep

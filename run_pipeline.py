@@ -61,8 +61,6 @@ def init_directory_structure():
     data_storage_dir = config.get('pipeline', {}).get('data_storage_dir', "data_storage")
     processed_data_dir = config.get('pipeline', {}).get('processed_data_dir', "processed_data")
     nlp_results_dir = config.get('pipeline', {}).get('nlp_results_dir', "nlp_results")
-    api_data_dir = config.get('pipeline', {}).get('api_data_dir', "api_data")
-    api_requests_dir = config.get('pipeline', {}).get('api_requests_dir', "api_requests")
     
     # Create the main data directory
     data_dir = base_dir / data_dir_name
@@ -72,9 +70,7 @@ def init_directory_structure():
     directories = [
         data_dir / data_storage_dir,
         data_dir / processed_data_dir,
-        data_dir / nlp_results_dir,
-        data_dir / api_data_dir,
-        data_dir / api_requests_dir
+        data_dir / nlp_results_dir
     ]
     
     # Create each directory

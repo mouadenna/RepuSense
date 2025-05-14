@@ -82,10 +82,45 @@ def run_repusense_pipeline(company_name, **kwargs):
 def run_all_companies_pipeline(**kwargs):
     """
     Run the pipeline for all companies in the system.
+    Gets company names from existing folders in S3 at s3://repusense-results/data/nlp_results/
     """
-    # In a real system, this would fetch company names from a database
-    # For this example, we'll use a hardcoded list
-    companies = ['inwi', 'microsoft', 'apple', 'google', 'amazon']
+    companies = []
+    
+    # Get companies from S3
+    try:
+        s3_hook = S3Hook()
+        if not s3_hook.check_for_bucket(S3_BUCKET):
+            print(f"S3 bucket {S3_BUCKET} not found")
+            return {}
+            
+        # List companies in the "data/nlp_results/" path within the S3 bucket
+        s3_client = s3_hook.get_conn()
+        response = s3_client.list_objects_v2(
+            Bucket=S3_BUCKET,
+            Prefix='data/nlp_results/',
+            Delimiter='/'
+        )
+        
+        if 'CommonPrefixes' in response:
+            for prefix in response['CommonPrefixes']:
+                # Extract company name from prefix (e.g., "data/nlp_results/companyname/")
+                prefix_path = prefix['Prefix']
+                company_name = prefix_path.split('/')[-2] if prefix_path.endswith('/') else prefix_path.split('/')[-1]
+                
+                if company_name:
+                    companies.append(company_name)
+            
+            print(f"Found {len(companies)} companies in S3: {', '.join(companies)}")
+        else:
+            print("No company directories found in S3")
+    except Exception as e:
+        print(f"Error accessing S3 for company list: {str(e)}")
+    
+    if not companies:
+        print("No companies found in S3")
+        return {}
+    
+    print(f"Processing {len(companies)} companies: {', '.join(companies)}")
     
     all_results = {}
     for company in companies:
@@ -96,40 +131,6 @@ def run_all_companies_pipeline(**kwargs):
             print(f"Error processing company {company}: {str(e)}")
     
     return all_results
-
-# Function to check if any API requests are pending
-def check_api_requests(**kwargs):
-    """
-    Check if there are any pending API requests for company analysis.
-    Returns list of companies that need to be processed.
-    """
-    # In a real system, this would check a database or queue for pending requests
-    # For this example, we'll return an empty list (no pending requests)
-    return []
-
-# Function to process API requests
-def process_api_requests(**kwargs):
-    """
-    Process pending API requests.
-    """
-    # Get pending requests
-    ti = kwargs['ti']
-    pending_requests = ti.xcom_pull(task_ids='check_api_requests')
-    
-    if not pending_requests:
-        print("No pending API requests to process")
-        return {}
-    
-    # Process each request
-    results = {}
-    for company in pending_requests:
-        try:
-            company_results = run_repusense_pipeline(company)
-            results[company] = company_results
-        except Exception as e:
-            print(f"Error processing API request for company {company}: {str(e)}")
-    
-    return results
 
 # Function to verify S3 bucket exists
 def ensure_s3_bucket_exists(**kwargs):
@@ -170,21 +171,5 @@ run_pipeline_task = PythonOperator(
     dag=dag,
 )
 
-# Task to check for API requests
-check_api_task = PythonOperator(
-    task_id='check_api_requests',
-    python_callable=check_api_requests,
-    dag=dag,
-)
-
-# Task to process any pending API requests
-process_api_task = PythonOperator(
-    task_id='process_api_requests',
-    python_callable=process_api_requests,
-    provide_context=True,
-    dag=dag,
-)
-
 # Define task dependencies
-ensure_bucket_task >> run_pipeline_task
-ensure_bucket_task >> check_api_task >> process_api_task 
+ensure_bucket_task >> run_pipeline_task 

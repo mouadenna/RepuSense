@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import subprocess
 from datetime import datetime
+import uuid
+import time
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -53,38 +55,32 @@ class AnalysisRequestProcessor:
         
         # Create data directory structure
         self.data_dir = self.base_dir / "data"
-        self.requests_dir = self.data_dir / "api_requests"
+        self.nlp_results_dir = self.data_dir / "nlp_results"
         
         # Create directories if they don't exist
         os.makedirs(self.data_dir, exist_ok=True)
-        os.makedirs(self.requests_dir, exist_ok=True)
+        os.makedirs(self.nlp_results_dir, exist_ok=True)
         
-        logger.info(f"Analysis request processor initialized. Requests dir: {self.requests_dir}, S3 bucket: {self.s3_bucket}")
+        # In-memory request tracking
+        self.requests = {}
+        
+        logger.info(f"Analysis request processor initialized. S3 bucket: {self.s3_bucket}")
     
-    def _save_request(self, request_data: Dict[str, Any]) -> str:
+    def _generate_request_id(self, company: str) -> str:
         """
-        Save a request to a file.
+        Generate a unique request ID.
         
         Args:
-            request_data: Request data
+            company: Company name
             
         Returns:
-            Path to the request file
+            Request ID
         """
-        # Generate a unique ID for the request
-        request_id = f"{request_data['company']}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        request_data['request_id'] = request_id
-        
-        # Save the request
-        request_path = self.requests_dir / f"{request_id}.json"
-        with open(request_path, 'w', encoding='utf-8') as f:
-            json.dump(request_data, f, indent=2)
-        
-        logger.info(f"Saved request to {request_path}")
+        request_id = f"{company}_{datetime.now().strftime('%Y%m%d%H%M%S')}_{str(uuid.uuid4())[:8]}"
         return request_id
     
     def process_request_sync(self, company: str, start_date: Optional[str] = None, 
-                            end_date: Optional[str] = None) -> Dict[str, Any]:
+                            end_date: Optional[str] = None, keyword: Optional[str] = None) -> Dict[str, Any]:
         """
         Process a request synchronously.
         
@@ -92,6 +88,7 @@ class AnalysisRequestProcessor:
             company: Company name
             start_date: Start date (optional, defaults to 30 days ago)
             end_date: End date (optional, defaults to today)
+            keyword: Optional keyword to filter by
             
         Returns:
             Processing result
@@ -108,14 +105,25 @@ class AnalysisRequestProcessor:
             start_dt = end_dt.replace(day=1)  # First day of the month
             start_date = start_dt.strftime('%Y-%m-%d')
         
-        # Save the request
+        # Create request data and ID
+        request_id = self._generate_request_id(company)
         request_data = {
+            'request_id': request_id,
             'company': company,
             'start_date': start_date,
             'end_date': end_date,
+            'keyword': keyword,
             'timestamp': datetime.now().isoformat()
         }
-        request_id = self._save_request(request_data)
+        
+        # Store initial status in memory
+        self.requests[request_id] = {
+            'request_id': request_id,
+            'status': 'processing',
+            'company': company,
+            'timestamp': datetime.now().isoformat(),
+            'request_data': request_data
+        }
         
         try:
             # Initialize the pipeline
@@ -131,22 +139,29 @@ class AnalysisRequestProcessor:
                 end_date=end_date
             )
             
-            # Record the status
+            # Build paths to the NLP results
+            nlp_result_paths = {
+                'topics': str(self.nlp_results_dir / company / "topics" / "topic_distribution.json"),
+                'sentiment': str(self.nlp_results_dir / company / "sentiment" / "sentiment_results.json"),
+                'keywords': str(self.nlp_results_dir / company / "keywords" / "keyword_results.json"),
+                'engagement': str(self.nlp_results_dir / company / "engagement" / "engagement_results.json"),
+                'wordcloud': str(self.nlp_results_dir / company / "keywords" / "word_cloud_data.json"),
+                'wordcloud_image': str(self.nlp_results_dir / company / "keywords" / "wordcloud.png"),
+                'topic_visualization': str(self.nlp_results_dir / company / "topics" / "topic_visualization.html")
+            }
+            
+            # Create status
             status = {
                 'request_id': request_id,
                 'status': 'completed',
                 'company': company,
                 'timestamp': datetime.now().isoformat(),
                 's3_urls': results.get('s3_urls', {}),
-                'api_data': {
-                    k: str(v) for k, v in results.get('api_data', {}).items()
-                }
+                'nlp_data': nlp_result_paths
             }
             
-            # Save the status
-            status_path = self.requests_dir / f"{request_id}_status.json"
-            with open(status_path, 'w', encoding='utf-8') as f:
-                json.dump(status, f, indent=2)
+            # Store the status in memory
+            self.requests[request_id] = status
             
             logger.info(f"Request {request_id} completed successfully")
             return status
@@ -154,7 +169,7 @@ class AnalysisRequestProcessor:
         except Exception as e:
             logger.error(f"Error processing request {request_id}: {str(e)}")
             
-            # Record the error
+            # Record the error in memory
             status = {
                 'request_id': request_id,
                 'status': 'error',
@@ -163,22 +178,21 @@ class AnalysisRequestProcessor:
                 'error': str(e)
             }
             
-            # Save the status
-            status_path = self.requests_dir / f"{request_id}_status.json"
-            with open(status_path, 'w', encoding='utf-8') as f:
-                json.dump(status, f, indent=2)
+            # Store the status in memory
+            self.requests[request_id] = status
             
             return status
     
     def process_request_async(self, company: str, start_date: Optional[str] = None, 
-                             end_date: Optional[str] = None) -> Dict[str, Any]:
+                             end_date: Optional[str] = None, keyword: Optional[str] = None) -> Dict[str, Any]:
         """
-        Process a request asynchronously by scheduling it with Airflow.
+        Process a request asynchronously.
         
         Args:
             company: Company name
             start_date: Start date (optional)
             end_date: End date (optional)
+            keyword: Optional keyword to filter by
             
         Returns:
             Request ID and status
@@ -195,30 +209,35 @@ class AnalysisRequestProcessor:
             start_dt = end_dt.replace(day=1)  # First day of the month
             start_date = start_dt.strftime('%Y-%m-%d')
         
-        # Save the request
+        # Create request data and ID
+        request_id = self._generate_request_id(company)
         request_data = {
+            'request_id': request_id,
             'company': company,
             'start_date': start_date,
             'end_date': end_date,
+            'keyword': keyword,
             'timestamp': datetime.now().isoformat(),
             'scheduled': True
         }
-        request_id = self._save_request(request_data)
         
         # Create a status record for the scheduled request
         status = {
             'request_id': request_id,
             'status': 'scheduled',
             'company': company,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'request_data': request_data
         }
         
-        # Save the status
-        status_path = self.requests_dir / f"{request_id}_status.json"
-        with open(status_path, 'w', encoding='utf-8') as f:
-            json.dump(status, f, indent=2)
+        # Store in memory
+        self.requests[request_id] = status
         
+        # Start async processing in a separate thread or process
+        # This would normally be handled by a task queue like Celery
+        # For simplicity, we're just logging it
         logger.info(f"Request {request_id} scheduled successfully")
+        
         return status
     
     def get_request_status(self, request_id: str) -> Dict[str, Any]:
@@ -231,27 +250,14 @@ class AnalysisRequestProcessor:
         Returns:
             Request status
         """
-        status_path = self.requests_dir / f"{request_id}_status.json"
+        # Check if request exists in memory
+        if request_id in self.requests:
+            return self.requests[request_id]
         
-        if not status_path.exists():
-            return {
-                'request_id': request_id,
-                'status': 'unknown'
-            }
-        
-        try:
-            with open(status_path, 'r', encoding='utf-8') as f:
-                status = json.load(f)
-            
-            return status
-        
-        except Exception as e:
-            logger.error(f"Error reading status for request {request_id}: {str(e)}")
-            return {
-                'request_id': request_id,
-                'status': 'error',
-                'error': str(e)
-            }
+        return {
+            'request_id': request_id,
+            'status': 'unknown'
+        }
     
     def list_requests(self, company: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
         """
@@ -264,32 +270,25 @@ class AnalysisRequestProcessor:
         Returns:
             List of requests
         """
-        requests = []
+        # Filter requests by company if specified
+        if company:
+            filtered_requests = [r for r in self.requests.values() if r.get('company') == company]
+        else:
+            filtered_requests = list(self.requests.values())
         
-        try:
-            # Get all status files
-            status_files = list(self.requests_dir.glob("*_status.json"))
-            
-            # Sort by modification time (newest first)
-            status_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-            
-            # Process files
-            for status_file in status_files[:limit]:
-                with open(status_file, 'r', encoding='utf-8') as f:
-                    status = json.load(f)
-                
-                # Filter by company if specified
-                if company and status.get('company') != company:
-                    continue
-                
-                requests.append(status)
+        # Sort by timestamp (newest first)
+        sorted_requests = sorted(
+            filtered_requests,
+            key=lambda x: x.get('timestamp', ''),
+            reverse=True
+        )
         
-        except Exception as e:
-            logger.error(f"Error listing requests: {str(e)}")
+        # Limit the number of results
+        limited_requests = sorted_requests[:limit]
         
         return {
-            'requests': requests,
-            'count': len(requests)
+            'requests': limited_requests,
+            'count': len(limited_requests)
         }
 
 # Singleton instance for use in FastAPI

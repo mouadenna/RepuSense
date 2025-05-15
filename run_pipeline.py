@@ -88,11 +88,11 @@ def run_pipeline(args):
     config = load_config()
     
     # Construct the command
-    cmd = [sys.executable, "nlp_pipeline/main.py"]
-    
-    # Add company name if provided
-    if args.company:
-        cmd.extend(["--company", args.company])
+    cmd = [
+        "python", "-m", "nlp_pipeline.main",
+        "--company", args.company,
+        "--output-dir", str(Path(__file__).parent / "data")
+    ]
     
     # Add date range if provided
     if args.start_date:
@@ -123,16 +123,6 @@ def run_pipeline(args):
     
     if args.skip_keyword:
         cmd.append("--skip-keyword")
-    
-    # Add S3 configuration from config.json
-    use_s3 = config.get('s3', {}).get('enabled', True)
-    s3_bucket = config.get('s3', {}).get('bucket')
-    
-    if use_s3:
-        cmd.append("--use-s3")
-        
-    if s3_bucket:
-        cmd.extend(["--s3-bucket", s3_bucket])
     
     # Run the pipeline
     print(f"Executing command: {' '.join(cmd)}")

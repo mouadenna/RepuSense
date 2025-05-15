@@ -32,7 +32,6 @@ requests>=2.28.0
 
 # AWS and Storage
 boto3>=1.26.0
-s3fs>=2023.1.0
 
 # Airflow
 apache-airflow>=2.6.0

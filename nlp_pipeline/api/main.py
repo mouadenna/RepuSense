@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import date, datetime
 import sys
-import boto3
-from botocore.exceptions import ClientError
 
 from fastapi import FastAPI, HTTPException, Query, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,18 +45,6 @@ def load_config():
 
 config = load_config()
 
-# S3 configuration
-S3_BUCKET = config.get('s3', {}).get('bucket', "repusense-results")
-S3_REGION = config.get('s3', {}).get('region', "us-east-1")
-
-# Initialize S3 client
-try:
-    s3_client = boto3.client('s3', region_name=S3_REGION)
-    logger.info(f"S3 client initialized for bucket: {S3_BUCKET}")
-except Exception as e:
-    logger.error(f"Error initializing S3 client: {str(e)}")
-    s3_client = None
-
 # Create FastAPI app
 app = FastAPI(
     title="RepuSense API",
@@ -74,9 +60,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Set S3 bucket configuration for request processor
-request_processor.s3_bucket = S3_BUCKET
 
 # Define data models
 class CompanyInfo(BaseModel):
@@ -118,75 +101,24 @@ class AnalysisResponse(BaseModel):
     company: str
     timestamp: str
 
-# Helper function to load data from S3
-def load_s3_json(s3_key):
-    """Load JSON data from S3 bucket."""
-    if not s3_client:
-        logger.error("S3 client not initialized")
-        return None
-    
-    try:
-        response = s3_client.get_object(Bucket=S3_BUCKET, Key=s3_key)
-        content = response['Body'].read().decode('utf-8')
-        return json.loads(content)
-    except ClientError as e:
-        error_code = e.response.get('Error', {}).get('Code')
-        if error_code == 'NoSuchKey':
-            logger.info(f"File not found in S3: {s3_key}")
-        else:
-            logger.error(f"Error loading S3 file {s3_key}: {str(e)}")
-        return None
-    except Exception as e:
-        logger.error(f"Error loading S3 file {s3_key}: {str(e)}")
-        return None
-
-# Helper function to get an image from S3
-def get_s3_image(s3_key):
-    """Get image data from S3 bucket."""
-    if not s3_client:
-        logger.error("S3 client not initialized")
-        return None
-    
-    try:
-        response = s3_client.get_object(Bucket=S3_BUCKET, Key=s3_key)
-        return response['Body'].read()
-    except ClientError as e:
-        error_code = e.response.get('Error', {}).get('Code')
-        if error_code == 'NoSuchKey':
-            logger.info(f"Image not found in S3: {s3_key}")
-        else:
-            logger.error(f"Error loading S3 image {s3_key}: {str(e)}")
-        return None
-    except Exception as e:
-        logger.error(f"Error loading S3 image {s3_key}: {str(e)}")
-        return None
-
 # Helper function to load JSON data for a specific company
 def load_json_data(filename, company=None):
     """
-    Load data for a company, prioritizing S3 over local files.
+    Load data for a company from local files.
     """
     result = None
     
     if company:
-        # Try to load from S3 first
-        s3_prefix = f"data/nlp_results/{company}/"
+        file_mapping = {
+            "topics.json": NLP_RESULTS_DIR / company / "topics" / "topic_distribution.json",
+            "sentiment.json": NLP_RESULTS_DIR / company / "sentiment" / "sentiment_results.json",
+            "keywords.json": NLP_RESULTS_DIR / company / "keywords" / "keyword_results.json",
+            "engagement.json": NLP_RESULTS_DIR / company / "engagement" / "engagement_results.json",
+            "wordcloud.json": NLP_RESULTS_DIR / company / "keywords" / "word_cloud_data.json"
+        }
         
-        if filename == "topics.json":
-            s3_key = f"{s3_prefix}topics/topic_distribution.json"
-            result = load_s3_json(s3_key)
-        elif filename == "sentiment.json":
-            s3_key = f"{s3_prefix}sentiment/sentiment_results.json"
-            result = load_s3_json(s3_key)
-        elif filename == "keywords.json":
-            s3_key = f"{s3_prefix}keywords/keyword_results.json"
-            result = load_s3_json(s3_key)
-        elif filename == "engagement.json":
-            s3_key = f"{s3_prefix}engagement/engagement_results.json"
-            result = load_s3_json(s3_key)
-        elif filename == "wordcloud.json":
-            s3_key = f"{s3_prefix}keywords/word_cloud_data.json"
-            result = load_s3_json(s3_key)
+        if filename in file_mapping:
+            result = _try_load_json(file_mapping[filename])
         elif filename == "company_info.json":
             # Create company info on the fly
             result = {
@@ -194,50 +126,13 @@ def load_json_data(filename, company=None):
                 "analysis_timestamp": datetime.now().isoformat(),
                 "data_sources": ["Reddit"]
             }
-        
-        # If not found in S3, fall back to local directory as backup
-        if result is None:
-            logger.info(f"Data not found in S3, checking local directory for {company}/{filename}")
-            file_mapping = {
-                "topics.json": NLP_RESULTS_DIR / company / "topics" / "topic_distribution.json",
-                "sentiment.json": NLP_RESULTS_DIR / company / "sentiment" / "sentiment_results.json",
-                "keywords.json": NLP_RESULTS_DIR / company / "keywords" / "keyword_results.json",
-                "engagement.json": NLP_RESULTS_DIR / company / "engagement" / "engagement_results.json",
-                "wordcloud.json": NLP_RESULTS_DIR / company / "keywords" / "word_cloud_data.json"
-            }
-            
-            if filename in file_mapping:
-                result = _try_load_json(file_mapping[filename])
     else:
         # Try to find the first available company
-        try:
-            # List all companies in S3
-            if s3_client:
-                response = s3_client.list_objects_v2(
-                    Bucket=S3_BUCKET,
-                    Prefix='data/nlp_results/',
-                    Delimiter='/'
-                )
-                
-                if 'CommonPrefixes' in response:
-                    for prefix in response['CommonPrefixes']:
-                        company_path = prefix['Prefix']
-                        company_name = company_path.split('/')[-2] if company_path.endswith('/') else company_path.split('/')[-1]
-                        
-                        if company_name:
-                            result = load_json_data(filename, company_name)
-                            if result:
-                                break
-        except Exception as e:
-            logger.error(f"Error listing companies in S3: {str(e)}")
-        
-        # If not found in S3, check local directory
-        if result is None:
-            for company_dir in NLP_RESULTS_DIR.iterdir():
-                if company_dir.is_dir():
-                    result = load_json_data(filename, company_dir.name)
-                    if result:
-                        break
+        for company_dir in NLP_RESULTS_DIR.iterdir():
+            if company_dir.is_dir():
+                result = load_json_data(filename, company_dir.name)
+                if result:
+                    break
     
     return result
 
@@ -258,49 +153,19 @@ def _try_load_json(file_path):
 
 # Helper function to get available companies
 def get_available_companies():
-    """Get list of available companies, prioritizing S3."""
+    """Get list of available companies from local directory."""
     companies = []
     
-    # Try to get companies from S3 first
-    if s3_client:
-        try:
-            response = s3_client.list_objects_v2(
-                Bucket=S3_BUCKET,
-                Prefix='data/nlp_results/',
-                Delimiter='/'
-            )
-            
-            if 'CommonPrefixes' in response:
-                for prefix in response['CommonPrefixes']:
-                    company_path = prefix['Prefix']
-                    company_name = company_path.split('/')[-2] if company_path.endswith('/') else company_path.split('/')[-1]
-                    
-                    if company_name:
-                        companies.append({
-                            "name": company_name,
-                            "analysis_timestamp": datetime.now().isoformat(),
-                            "data_sources": ["Reddit"],
-                            "source": "S3"
-                        })
-                
-                logger.info(f"Found {len(companies)} companies in S3")
-                return companies
-        except Exception as e:
-            logger.error(f"Error listing companies in S3: {str(e)}")
+    for company_dir in NLP_RESULTS_DIR.iterdir():
+        if company_dir.is_dir():
+            companies.append({
+                "name": company_dir.name,
+                "analysis_timestamp": datetime.now().isoformat(),
+                "data_sources": ["Reddit"],
+                "source": "local"
+            })
     
-    # Fall back to local directory if S3 failed or returned no results
-    if not companies:
-        for company_dir in NLP_RESULTS_DIR.iterdir():
-            if company_dir.is_dir():
-                companies.append({
-                    "name": company_dir.name,
-                    "analysis_timestamp": datetime.now().isoformat(),
-                    "data_sources": ["Reddit"],
-                    "source": "local"
-                })
-        
-        logger.info(f"Found {len(companies)} companies in local directory")
-    
+    logger.info(f"Found {len(companies)} companies in local directory")
     return companies
 
 # API Routes
@@ -384,14 +249,6 @@ def get_company_wordcloud_image(company_name: str):
     """
     Get word cloud image for a specific company.
     """
-    # Try S3 first
-    s3_key = f"data/nlp_results/{company_name}/keywords/wordcloud.png"
-    image_data = get_s3_image(s3_key)
-    
-    if image_data:
-        return Response(content=image_data, media_type="image/png")
-    
-    # Fall back to local file if not found in S3
     image_path = NLP_RESULTS_DIR / company_name / "keywords" / "wordcloud.png"
     if not image_path.exists():
         raise HTTPException(status_code=404, detail=f"Word cloud image for company {company_name} not found")
@@ -403,15 +260,6 @@ def get_company_topic_visualization_html(company_name: str):
     """
     Get the HTML visualization file for company topics.
     """
-    # Try S3 first
-    s3_key = f"data/nlp_results/{company_name}/topics/topic_visualization.html"
-    html_content_data = get_s3_image(s3_key)
-    
-    if html_content_data:
-        html_content = html_content_data.decode('utf-8')
-        return HTMLResponse(content=html_content, status_code=200)
-    
-    # Fall back to local file if not found in S3
     visualization_path = NLP_RESULTS_DIR / company_name / "topics" / "topic_visualization.html"
     
     if not visualization_path.exists():

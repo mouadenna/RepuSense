@@ -123,6 +123,32 @@ openai_credentials.json
 !tests/data/**/*.csv 
 
 
+# Report files
+report.md
+RepuSense_Project_Report.md
+RepuSense_Project_Report.tex
+
+# Generated files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.dvi
+*.pdf
+
+# Keep specific report files
+!report.md
+!RepuSense_Project_Report.md
+!RepuSense_Project_Report.tex
+
+
 
 # And keep .gitkeep files
 !data/*/.gitkeep

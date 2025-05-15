@@ -17,21 +17,27 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
   // Check for saved company in localStorage on initial load (client-side only)
   useEffect(() => {
-    const savedCompany = localStorage.getItem('selectedCompany');
-    if (savedCompany) {
-      setSelectedCompanyState(savedCompany);
+    if (typeof window !== 'undefined') {
+      const savedCompany = localStorage.getItem('selectedCompany');
+      if (savedCompany) {
+        setSelectedCompanyState(savedCompany);
+      }
     }
   }, []);
 
   // Update localStorage when company changes
   const setSelectedCompany = (company: string) => {
     setSelectedCompanyState(company);
-    localStorage.setItem('selectedCompany', company);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('selectedCompany', company);
+    }
   };
 
   const clearSelectedCompany = () => {
     setSelectedCompanyState(null);
-    localStorage.removeItem('selectedCompany');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('selectedCompany');
+    }
   };
 
   return (

@@ -1,0 +1,74 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Development and IDE files
+.vscode
+.idea
+*.swp
+*.swo
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Dashboard (Next.js) related
+dashboard/
+node_modules
+.next
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Documentation and reports
+*.md
+*.tex
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+report.md
+RepuSense_Project_Report*
+
+# Data and logs (will be mounted as volumes)
+data/*
+logs/*
+!data/nlp_results/
+
+# Environment and config
+.env
+.env.*
+*.env
+config.json
+
+# Test files
+tests/
+test/
+*_test.py
+*_tests.py
+pytest.ini
+.coverage
+htmlcov/
+
+# Airflow (if not needed in API)
+airflow/
+
+# Scraping scripts (if not needed in API)
+scrapping script/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db 

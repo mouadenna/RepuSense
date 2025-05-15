@@ -7,10 +7,14 @@ import { Filter, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { IssueList } from "@/components/issues/issue-list"
 import { IssueDetails } from "@/components/issues/issue-details"
-import { RootCauseAnalysis } from "@/components/issues/root-cause-analysis"
+import dynamic from 'next/dynamic'
 import { IssueTimeline } from "@/components/issues/issue-timeline"
 import { RelatedMentions } from "@/components/issues/related-mentions"
 import { IssueProvider } from "@/contexts/IssueContext"
+
+const RootCauseAnalysis = dynamic(() => import('@/components/issues/root-cause-analysis').then(mod => mod.RootCauseAnalysis), {
+  ssr: false
+})
 
 export default function IssuesPageClient() {
   return (

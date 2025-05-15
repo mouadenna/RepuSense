@@ -1,32 +1,28 @@
-FROM apache/airflow:2.7.1
+# Use Python 3.9 as base image
+FROM python:3.9-slim
 
-USER root
+# Set working directory
+WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && \
-    apt-get install -y \
-    git \
-    openjdk-11-jdk \
-    python3-pip \
-    && apt-get clean
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set Java environment variables
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-ENV PATH=$PATH:$JAVA_HOME/bin
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
 
-# Install Python packages
-COPY requirements.txt /requirements.txt
-RUN pip install --no-cache-dir -r /requirements.txt
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Spark NLP
-RUN pip install --no-cache-dir spark-nlp==4.4.0
+# Copy the application code
+COPY . .
 
-# Set Airflow environment variables
-ENV AIRFLOW_HOME=/opt/airflow
-ENV PYTHONPATH="${PYTHONPATH}:/opt/airflow"
+# Create necessary directories
+RUN mkdir -p data/nlp_results
 
-USER airflow
+# Expose the port the app runs on
+EXPOSE 8000
 
-# Copy DAGs and other necessary files
-COPY airflow/ ${AIRFLOW_HOME}/dags/
-COPY config.json ${AIRFLOW_HOME}/
+# Command to run the application
+CMD ["uvicorn", "nlp_pipeline.api.main:app", "--host", "0.0.0.0", "--port", "8000"] 

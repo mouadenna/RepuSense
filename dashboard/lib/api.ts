@@ -7,6 +7,14 @@ interface CompanyInfo {
   data_sources: string[];
 }
 
+interface Recommendation {
+  issue: string;
+  recommendation: string;
+  urgency: "High" | "Medium" | "Low";
+  related_topics: string[];
+  impact_score: number;
+}
+
 interface AnalysisRequest {
   company: string;
   start_date?: string;
@@ -289,7 +297,7 @@ export const apiService = {
   /**
    * Get recommendations for a specific company
    */
-  async getCompanyRecommendations(companyName: string) {
+  async getCompanyRecommendations(companyName: string): Promise<{ recommendations: Recommendation[] } | null> {
     try {
       const response = await fetch(`${API_ENDPOINT}/api/recommendations?company=${companyName}`, {
         method: 'GET',
@@ -305,29 +313,6 @@ export const apiService = {
       return response.json();
     } catch (error) {
       console.error(`Error fetching recommendations for ${companyName}:`, error);
-      return null;
-    }
-  },
-
-  /**
-   * Get alerts for a specific company
-   */
-  async getCompanyAlerts(companyName: string) {
-    try {
-      const response = await fetch(`${API_ENDPOINT}/api/alerts?company=${companyName}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      return response.json();
-    } catch (error) {
-      console.error(`Error fetching alerts for ${companyName}:`, error);
       return null;
     }
   },
@@ -354,4 +339,165 @@ export const apiService = {
       return null;
     }
   },
-}; 
+
+  /**
+   * Get topic barchart visualization HTML for a specific company
+   */
+  async getCompanyTopicBarchartHtml(companyName: string): Promise<string | null> {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/company/${companyName}/topics/barchart`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/html',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response.text();
+    } catch (error) {
+      console.error(`Error fetching topic barchart HTML for ${companyName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Get topic keywords data for a specific company
+   */
+  async getCompanyTopicKeywords(companyName: string) {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/company/${companyName}/topics/keywords`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`Error fetching topic keywords for ${companyName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Get sentiment distribution visualization HTML for a specific company
+   */
+  async getCompanySentimentDistributionHtml(companyName: string): Promise<string | null> {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/company/${companyName}/sentiment/distribution`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/html',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response.text();
+    } catch (error) {
+      console.error(`Error fetching sentiment distribution HTML for ${companyName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Get top engaged posts visualization HTML for a specific company
+   */
+  async getCompanyTopEngagedPostsHtml(companyName: string): Promise<string | null> {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/company/${companyName}/engagement/top-posts`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/html',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response.text();
+    } catch (error) {
+      console.error(`Error fetching top engaged posts HTML for ${companyName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Get engagement distribution visualization HTML for a specific company
+   */
+  async getCompanyEngagementDistributionHtml(companyName: string): Promise<string | null> {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/company/${companyName}/engagement/distribution`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'text/html',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response.text();
+    } catch (error) {
+      console.error(`Error fetching engagement distribution HTML for ${companyName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Get engagement analysis data for a specific company
+   */
+  async getCompanyEngagementAnalysis(companyName: string) {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/company/${companyName}/engagement/analysis`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`Error fetching engagement analysis for ${companyName}:`, error);
+      return null;
+    }
+  },
+
+  /**
+   * Get topic info data for a specific company
+   */
+  async getCompanyTopicInfo(companyName: string) {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/company/${companyName}/topics/info`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error(`Error fetching topic info for ${companyName}:`, error);
+      return null;
+    }
+  }
+};

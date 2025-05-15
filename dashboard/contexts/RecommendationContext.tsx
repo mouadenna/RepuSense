@@ -2,16 +2,11 @@
 import { createContext, useContext, useState, ReactNode } from "react"
 
 interface Recommendation {
-  id: number
-  type: string
-  title: string
-  description: string
-  impact_score: number
+  issue: string
+  recommendation: string
+  urgency: "High" | "Medium" | "Low"
   related_topics: string[]
-  sentiment_impact: {
-    current: number
-    potential: number
-  }
+  impact_score: number
 }
 
 interface RecommendationContextType {

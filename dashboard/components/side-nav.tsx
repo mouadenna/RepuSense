@@ -3,7 +3,6 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  AlertCircle,
   LayoutDashboard,
   Lightbulb,
   MessageSquare,
@@ -32,11 +31,6 @@ export function SideNav() {
       icon: LayoutDashboard,
     },
     {
-      name: "Issue Analyzer",
-      href: "/issues",
-      icon: AlertCircle,
-    },
-    {
       name: "Recommendations",
       href: "/recommendations",
       icon: Lightbulb,
@@ -49,7 +43,7 @@ export function SideNav() {
   ]
 
   return (
-    <aside className="hidden w-[250px] flex-col border-r bg-muted/40 md:flex">
+    <aside className="fixed left-0 top-20 h-[calc(100vh-5rem)] w-[250px] flex-col border-r bg-muted/40 md:flex">
       <nav className="grid gap-2 p-4">
         {navItems.map((item) => (
           <Link

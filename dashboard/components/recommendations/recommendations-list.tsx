@@ -2,23 +2,18 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Lightbulb, TrendingUp } from "lucide-react"
+import { AlertCircle, Clock, CheckCircle2, TrendingUp } from "lucide-react"
 import { useEffect } from "react"
 import { apiService } from "@/lib/api"
 import { useCompany } from "@/contexts/CompanyContext"
 import { useRecommendation } from "@/contexts/RecommendationContext"
 
 interface Recommendation {
-  id: number
-  type: string
-  title: string
-  description: string
-  impact_score: number
+  issue: string
+  recommendation: string
+  urgency: "High" | "Medium" | "Low"
   related_topics: string[]
-  sentiment_impact: {
-    current: number
-    potential: number
-  }
+  impact_score: number
 }
 
 export function RecommendationsList() {
@@ -92,38 +87,50 @@ export function RecommendationsList() {
     return <div className="text-sm text-muted-foreground">No recommendations available</div>
   }
 
+  const getUrgencyIcon = (urgency: string) => {
+    switch (urgency) {
+      case "High":
+        return <AlertCircle className="h-5 w-5 text-red-500" />
+      case "Medium":
+        return <Clock className="h-5 w-5 text-yellow-500" />
+      case "Low":
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />
+      default:
+        return null
+    }
+  }
+
   const handleCardClick = (recommendation: Recommendation) => {
     setSelectedRecommendation(recommendation)
   }
 
   return (
     <div className="space-y-3">
-      {recommendations.map((recommendation) => (
+      {recommendations.map((recommendation, index) => (
         <Card
-          key={recommendation.id}
+          key={index}
           className={`p-3 cursor-pointer hover:border-primary transition-colors ${
-            recommendation.id === selectedRecommendation?.id ? "border-primary bg-primary/5" : ""
+            recommendation === selectedRecommendation ? "border-primary bg-primary/5" : ""
           }`}
           onClick={() => handleCardClick(recommendation)}
         >
           <div className="flex items-start gap-2">
-            <Lightbulb
-              className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
-                recommendation.type === "high" ? "text-primary" : "text-muted-foreground"
-              }`}
-            />
+            {getUrgencyIcon(recommendation.urgency)}
             <div className="space-y-1 w-full">
-              <h3 className="font-medium text-sm">{recommendation.title}</h3>
+              <h3 className="font-medium text-sm">{recommendation.issue}</h3>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {recommendation.recommendation}
+              </p>
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <TrendingUp className="h-3 w-3 text-primary" />
                   <span>Impact: {recommendation.impact_score}</span>
                 </div>
                 <Badge
-                  variant={recommendation.type === "high" ? "destructive" : "outline"}
+                  variant={recommendation.urgency === "High" ? "destructive" : "outline"}
                   className="text-[10px] px-1 h-4"
                 >
-                  {recommendation.type}
+                  {recommendation.urgency}
                 </Badge>
               </div>
             </div>

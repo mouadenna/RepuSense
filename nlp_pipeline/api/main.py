@@ -345,64 +345,60 @@ def get_recommendations(company: str):
     """
     recommendations = [
         {
-            "id": 1,
-            "type": "high",
-            "title": "Improve customer service response time",
-            "description": "Analysis shows that customers frequently complain about slow response times. Consider implementing a faster response protocol for customer support channels.",
-            "impact_score": 85,
-            "related_topics": ["customer service", "support", "response time"],
-            "sentiment_impact": {
-                "current": -0.32,
-                "potential": 0.15
-            }
+            "issue": "Poor Internet Performance/Speed: Users are experiencing slow speeds, unreliable connections (including Wi-Fi and mobile networks), and speeds that don't match advertised rates, especially during specific times (night).",
+            "recommendation": "Investigate network infrastructure and optimize for peak hours. Conduct speed tests to verify advertised rates and address discrepancies. Improve WiFi signal strength and stability via router upgrades/updates. Consider providing troubleshooting guides or tools to help users diagnose connection problems.",
+            "urgency": "High",
+            "related_topics": ["internet speed", "network performance", "wifi", "mobile data"],
+            "impact_score": 90
         },
         {
-            "id": 2,
-            "type": "medium",
-            "title": "Highlight positive product features in marketing",
-            "description": "Customers frequently praise specific product features that aren't prominently featured in current marketing. Consider highlighting these features in upcoming campaigns.",
-            "impact_score": 72,
-            "related_topics": ["marketing", "product features", "advertising"],
-            "sentiment_impact": {
-                "current": 0.05,
-                "potential": 0.25
-            }
+            "issue": "Service Quality & Customer Support Issues: Complaints about unresolved service outages, issues with balance/recharging, difficulties canceling subscriptions (especially from abroad), and overall dissatisfaction with service resolution after contacting support.",
+            "recommendation": "Improve customer service response times and issue resolution processes. Develop a clear and accessible cancellation process, including options for users abroad. Address balance issues and recharging problems promptly. Prioritize fixing reported outages quickly.",
+            "urgency": "High",
+            "related_topics": ["customer service", "subscription", "billing", "support"],
+            "impact_score": 85
         },
         {
-            "id": 3,
-            "type": "high",
-            "title": "Address pricing concerns on premium plans",
-            "description": "Significant negative sentiment is associated with premium plan pricing. Consider reviewing competitive pricing or better communicating value proposition.",
-            "impact_score": 79,
-            "related_topics": ["pricing", "premium plans", "subscription"],
-            "sentiment_impact": {
-                "current": -0.41,
-                "potential": 0.10
-            }
+            "issue": "Plan/Package Comparison & Value Concerns: Users are seeking advice on which Inwi plan (or comparing Inwi to other providers like IAM/Orange) offers the best value, especially for specific needs (e.g., students, travelers). They also question the worth of switching between packages.",
+            "recommendation": "Develop clear and informative plan comparison tools and content that highlights the benefits of each plan for different user segments. Offer personalized recommendations based on usage patterns. Create case studies about the benefits of switching to Inwi plans from competitors.",
+            "urgency": "Medium",
+            "related_topics": ["plans", "packages", "pricing", "comparison"],
+            "impact_score": 75
         },
         {
-            "id": 4,
-            "type": "low",
-            "title": "Enhance mobile app user experience",
-            "description": "Users report various usability issues with the mobile application. Consider conducting usability testing and implementing UX improvements.",
-            "impact_score": 63,
-            "related_topics": ["mobile app", "user experience", "usability"],
-            "sentiment_impact": {
-                "current": -0.18,
-                "potential": 0.22
-            }
+            "issue": "Technical Issues & Compatibility: Users are reporting problems with specific Inwi services, devices (e.g., eSIM, routers), and compatibility with features like iMessage/FaceTime, or have questions about modifying Inwi devices.",
+            "recommendation": "Investigate and resolve compatibility issues with common services. Provide clear documentation and support for configuring Inwi devices. Test new services thoroughly before launch to avoid technical glitches.",
+            "urgency": "Medium",
+            "related_topics": ["technical support", "device compatibility", "esim", "router"],
+            "impact_score": 70
         },
         {
-            "id": 5,
-            "type": "medium",
-            "title": "Improve product documentation and tutorials",
-            "description": "Analysis shows that users struggle with understanding product features due to insufficient documentation. Creating better guides and tutorials could help adoption.",
-            "impact_score": 68,
-            "related_topics": ["documentation", "tutorials", "user education"],
-            "sentiment_impact": {
-                "current": -0.12,
-                "potential": 0.30
-            }
+            "issue": "Service Availability & Coverage: Users are asking about Inwi's fiber optic availability and coverage in specific areas (e.g., Agadir), and the installation time for fiber internet.",
+            "recommendation": "Provide a clear coverage map and estimated installation times. Streamline installation processes to decrease wait times. Expand fiber optic infrastructure to underserved areas.",
+            "urgency": "Medium",
+            "related_topics": ["coverage", "fiber optic", "installation", "availability"],
+            "impact_score": 65
+        },
+        {
+            "issue": "Unwanted/Unsolicited Messages: Users are receiving messages from unknown numbers on their Inwi SIM cards.",
+            "recommendation": "Implement stricter spam filtering measures and provide users with easy-to-use tools for reporting unwanted messages. Educate users about the risks of responding to messages from unknown numbers.",
+            "urgency": "Low",
+            "related_topics": ["spam", "security", "messaging", "privacy"],
+            "impact_score": 60
+        },
+        {
+            "issue": "Win by Inwi specific issues: Complaints around Win by Inwi blocking connection ports and services not working (iMessage, FaceTime).",
+            "recommendation": "Specifically address the issues with Win by Inwi: Investigate and resolve the connection port blocking. Provide clear instructions how to use iMessage and FaceTime on Win by Inwi.",
+            "urgency": "Medium",
+            "related_topics": ["win by inwi", "imessage", "facetime", "ports"],
+            "impact_score": 68
+        },
+        {
+            "issue": "Inwi Money app not working.",
+            "recommendation": "Investigate and fix the Inwi Money app functionality. Provide alternative ways to use Inwi Money services if the app is experiencing downtime.",
+            "urgency": "Medium",
+            "related_topics": ["inwi money", "mobile payment", "app", "digital services"],
+            "impact_score": 62
         }
     ]
     
@@ -522,6 +518,173 @@ def get_company_content_stats(company_name: str):
         "comments": total_comments,
         "by_source": {source["name"]: source["post_count"] + source["comment_count"] for source in data_sources}
     }
+
+@app.get("/api/company/{company_name}/topics/barchart")
+def get_company_topic_barchart(company_name: str):
+    """
+    Get the HTML barchart visualization for company topics.
+    """
+    visualization_path = NLP_RESULTS_DIR / company_name / "topics" / "topic_barchart.html"
+    
+    if not visualization_path.exists():
+        raise HTTPException(status_code=404, detail=f"Topic barchart for {company_name} not found")
+    
+    try:
+        with open(visualization_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content, status_code=200)
+    except Exception as e:
+        logger.error(f"Error reading topic barchart HTML: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading visualization file")
+
+@app.get("/api/company/{company_name}/topics/keywords")
+def get_company_topic_keywords(company_name: str):
+    """
+    Get topic keywords data for a specific company.
+    """
+    data = load_json_data("topic_keywords.json", company_name)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"Topic keywords data for company {company_name} not found")
+    return data
+
+@app.get("/api/company/{company_name}/sentiment/distribution")
+def get_company_sentiment_distribution(company_name: str):
+    """
+    Get the HTML visualization for sentiment distribution.
+    """
+    visualization_path = NLP_RESULTS_DIR / company_name / "sentiment" / "sentiment_distribution.html"
+    
+    if not visualization_path.exists():
+        raise HTTPException(status_code=404, detail=f"Sentiment distribution for {company_name} not found")
+    
+    try:
+        with open(visualization_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content, status_code=200)
+    except Exception as e:
+        logger.error(f"Error reading sentiment distribution HTML: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading visualization file")
+
+@app.get("/api/company/{company_name}/engagement/top-posts")
+def get_company_top_engaged_posts(company_name: str):
+    """
+    Get the HTML visualization for top engaged posts.
+    """
+    visualization_path = NLP_RESULTS_DIR / company_name / "engagement" / "top_engaged_posts.html"
+    
+    if not visualization_path.exists():
+        raise HTTPException(status_code=404, detail=f"Top engaged posts visualization for {company_name} not found")
+    
+    try:
+        with open(visualization_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content, status_code=200)
+    except Exception as e:
+        logger.error(f"Error reading top engaged posts HTML: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading visualization file")
+
+@app.get("/api/company/{company_name}/engagement/distribution")
+def get_company_engagement_distribution(company_name: str):
+    """
+    Get the HTML visualization for engagement distribution.
+    """
+    visualization_path = NLP_RESULTS_DIR / company_name / "engagement" / "engagement_distribution.html"
+    
+    if not visualization_path.exists():
+        raise HTTPException(status_code=404, detail=f"Engagement distribution for {company_name} not found")
+    
+    try:
+        with open(visualization_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content, status_code=200)
+    except Exception as e:
+        logger.error(f"Error reading engagement distribution HTML: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading visualization file")
+
+@app.get("/api/company/{company_name}/engagement/analysis")
+def get_company_engagement_analysis(company_name: str):
+    """
+    Get engagement analysis data for a specific company.
+    """
+    file_path = NLP_RESULTS_DIR / company_name / "engagement" / "engagement_analysis.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Engagement analysis data for company {company_name} not found")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        logger.error(f"Error reading engagement analysis data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading engagement analysis data")
+
+@app.get("/api/company/{company_name}/topics/info")
+def get_company_topic_info(company_name: str):
+    """
+    Get detailed topic information for a specific company.
+    """
+    file_path = NLP_RESULTS_DIR / company_name / "topics" / "topic_info.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Topic info data for company {company_name} not found")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        logger.error(f"Error reading topic info data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading topic info data")
+
+@app.get("/api/company/{company_name}/documents/topics")
+def get_company_documents_with_topics(company_name: str):
+    """
+    Get documents with their associated topics for a specific company.
+    """
+    file_path = NLP_RESULTS_DIR / company_name / "topics" / "documents_with_topics.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Documents with topics data for company {company_name} not found")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        logger.error(f"Error reading documents with topics data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading documents with topics data")
+
+@app.get("/api/company/{company_name}/documents/sentiment")
+def get_company_documents_with_sentiment(company_name: str):
+    """
+    Get documents with their sentiment analysis for a specific company.
+    """
+    file_path = NLP_RESULTS_DIR / company_name / "sentiment" / "documents_with_sentiment.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Documents with sentiment data for company {company_name} not found")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        logger.error(f"Error reading documents with sentiment data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading documents with sentiment data")
+
+@app.get("/api/company/{company_name}/documents/keywords")
+def get_company_documents_with_keywords(company_name: str):
+    """
+    Get documents with their keywords for a specific company.
+    """
+    file_path = NLP_RESULTS_DIR / company_name / "keywords" / "documents_with_keywords.json"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Documents with keywords data for company {company_name} not found")
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+    except Exception as e:
+        logger.error(f"Error reading documents with keywords data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error reading documents with keywords data")
 
 if __name__ == "__main__":
     import uvicorn

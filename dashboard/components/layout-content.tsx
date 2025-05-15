@@ -11,7 +11,7 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
   
   return (
     <div className="flex min-h-screen flex-col">
-      <header className={`sticky top-0 z-30 flex h-16 items-center gap-4 ${isCompanySelected ? 'border-b bg-background px-6' : 'px-6'}`}>
+      <header className={`sticky top-0 z-30 flex h-20 items-center gap-4 ${isCompanySelected ? 'border-b bg-background px-6' : 'px-6'}`}>
         <MainNav />
         <div className="ml-auto flex items-center gap-4">
           <UserNav />
@@ -19,7 +19,7 @@ export function LayoutContent({ children }: { children: React.ReactNode }) {
       </header>
       <div className="flex flex-1">
         <SideNav />
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto md:pl-[250px]">{children}</main>
       </div>
     </div>
   )

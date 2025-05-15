@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { BarChart3 } from "lucide-react"
+import Image from "next/image"
 import { useCompany } from "@/contexts/CompanyContext"
 
 export function MainNav() {
@@ -13,8 +13,13 @@ export function MainNav() {
         href="/" 
         className={`flex items-center gap-2 ${isCompanySelected ? 'font-semibold' : 'font-bold text-xl'}`}
       >
-        <BarChart3 className={`${isCompanySelected ? 'h-6 w-6' : 'h-7 w-7'} text-primary`} />
-        <span>RepuSense</span>
+        <Image 
+          src="/repusense-logo.png" 
+          alt="RepuSense Logo" 
+          width={isCompanySelected ? 96 : 28} 
+          height={isCompanySelected ? 96 : 28}
+          className="object-contain"
+        />
       </Link>
     </>
   )
